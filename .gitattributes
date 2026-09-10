@@ -1,0 +1,7 @@
+* text=auto
+
+# The installer verifies these generated artifacts byte-for-byte.
+integration/webswing-v1.patch -text
+integration/patches/*.patch -text
+integration/payload/** -text
+

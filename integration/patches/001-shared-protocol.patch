@@ -1,0 +1,284 @@
+warning: in the working copy of 'Common/cmdparse/cmdcommon.c', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Common/cmdparse/cmdcommon.h', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Common/cmdparse/cmdcontrols.h', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Common/cmdparse/cmdenum.h', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Common/entity/motion.h', LF will be replaced by CRLF the next time Git touches it
+diff --git a/Common/cmdparse/cmdcommon.c b/Common/cmdparse/cmdcommon.c
+index 778afd3cc44830b6dd5f24eb5ed6c6ee635b9b40..da193f503f94bb533648bca6d75995571589110d 100644
+--- a/Common/cmdparse/cmdcommon.c
++++ b/Common/cmdparse/cmdcommon.c
+@@ -28,6 +28,27 @@
+ 
+ 
+ ControlState control_state;
++S32 g_cohsourcedev_anim_canary;
++// Issue 36 forensic safe baseline: custom Web Swing move selection stays off
++// during normal gameplay unless explicitly re-enabled for gated canary work.
++S32 g_cohsourcedev_webswing_anim_selection;
++// -1 leaves the authoritative backend unchanged; 0/1 requests the matching
++// Web Swing backend after the controlled player reaches a map.
++S32 g_cohsourcedev_webswing_physics_selection = -1;
++#if CLIENT
++// Client-only manual observability toggle.  It intentionally does not live in
++// control_cmds, so it is never sent to the server as gameplay input.
++S32 g_cohsourcedev_webswing_capture;
++// Client-only WebSwingDev rendering selector.  It intentionally does not live
++// in control_cmds, so style changes never become gameplay or network state.
++// Production default is the authored organic web presentation. LEGACY remains
++// style 0 as a conservative renderer fallback and an explicit player choice.
++S32 g_cohsourcedev_webswing_visual_selection = 1;
++// Client-only visual inspection aid. Positive values move only the native
++// endpoint FX downward for close-up review; the tether and physics anchor stay
++// at their authoritative world-space position.
++F32 g_cohsourcedev_webswing_anchor_preview_offset = 0.0f;
++#endif
+ 
+ ControlId opposite_control_id[CONTROLID_BINARY_MAX] =
+ {
+@@ -101,6 +122,12 @@ ControlId opposite_control_id[CONTROLID_BINARY_MAX] =
+                             "Toggles autorun." },
+         { 9, "no_ragdoll", 0, {{ PARSETYPE_S32, &control_state.no_ragdoll }},0,
+                             "disables client ragdoll sim" },
++        { 0, "webswingcapture", 0, {{ PARSETYPE_S32, &g_cohsourcedev_webswing_capture }},0,
++                            "WebSwingDev client manual telemetry capture (1 start, 0 stop)" },
++        { 0, "webswingvisual", 0, {{ PARSETYPE_S32, &g_cohsourcedev_webswing_visual_selection }},0,
++                            "Current-session Web Swing visual style (0 LEGACY, 1 WEB, 2 TECH, 3 MAGIC); use /webswingstyle to save a choice." },
++        { 0, "webswinganchorpreview", 0, {{ PARSETYPE_FLOAT, &g_cohsourcedev_webswing_anchor_preview_offset }},0,
++                            "WebSwingDev visual-only native anchor preview downward offset (0 = actual physics anchor)" },
+         { 0 },
+     };
+ #endif
+@@ -149,6 +176,12 @@ Cmd control_cmds[] =
+                         "anim test flag" },
+     { 9, "atest9", 0, {{ PARSETYPE_S32, &control_state.anim_test[9] }},0,
+                         "anim test flag" },
++    { 9, "animcanary", 0, {{ PARSETYPE_S32, &g_cohsourcedev_anim_canary }},0,
++                        "WebSwingDev-only authored animation canary" },
++    { 9, "webswinganim", 0, {{ PARSETYPE_S32, &g_cohsourcedev_webswing_anim_selection }},0,
++                        "WebSwingDev custom Web Swing move selection (forensic safe baseline default: 0)" },
++    { 9, "webswingphysics", 0, {{ PARSETYPE_S32, &g_cohsourcedev_webswing_physics_selection }},0,
++                        "WebSwingDev Web Swing physics backend (0 REAL_ANCHOR, 1 SKY_ASSISTED)" },
+     { 1, "predict", 0, {{ PARSETYPE_S32, &control_state.predict }},0,
+                         "turn client side prediction on/off" },
+     { 9, "notimeout", CONCMD_NOTIMEOUT, {{ PARSETYPE_S32, &control_state.notimeout }}, 0,
+diff --git a/Common/cmdparse/cmdcommon.h b/Common/cmdparse/cmdcommon.h
+index dcf090e3af8d371f5afd8ffa305b4b02f3a5cf12..8a58cbef267248d636b9e60b2656084b36fc884d 100644
+--- a/Common/cmdparse/cmdcommon.h
++++ b/Common/cmdparse/cmdcommon.h
+@@ -321,6 +321,14 @@ typedef struct ControlState
+ } ControlState;
+ 
+ extern ControlState control_state;
++extern S32 g_cohsourcedev_anim_canary;
++extern S32 g_cohsourcedev_webswing_anim_selection;
++extern S32 g_cohsourcedev_webswing_physics_selection;
++#ifdef CLIENT
++extern S32 g_cohsourcedev_webswing_capture;
++extern S32 g_cohsourcedev_webswing_visual_selection;
++extern F32 g_cohsourcedev_webswing_anchor_preview_offset;
++#endif
+ extern ControlId opposite_control_id[CONTROLID_BINARY_MAX];
+ 
+ typedef struct Cmd Cmd;
+@@ -343,6 +351,7 @@ typedef struct GlobalState
+ 
+     int        no_file_change_check_cmd_set; //Cmd turning off file change check is set
+     int        no_file_change_check;            //above plus Client side per tick data change check
++    int        webswing_dev;                    //WebSwing development overlay/state-bit environment
+ 
+     #if CLIENT
+     U32        cur_timeGetTime;    
+diff --git a/Common/cmdparse/cmdcontrols.h b/Common/cmdparse/cmdcontrols.h
+index 0dde1ace635d8d222a66b74498d0ab54b58c9fcb..9341a28e268a17e43762a0bfa2e8e3798a434e9e 100644
+--- a/Common/cmdparse/cmdcontrols.h
++++ b/Common/cmdparse/cmdcontrols.h
+@@ -130,6 +130,12 @@ typedef struct ServerControlState
+     U32                                hover_board                : 1;
+     U32                                magic_carpet            : 1;
+     U32                                parkour_run                : 1;
++    U32                                web_swing                : 1;
++    // 0 = REAL_ANCHOR, 1 = SKY_ASSISTED. REAL_ANCHOR remains the default.
++    U32                                web_swing_backend        : 1;
++    // TestClient-only diagnostic state. This is synchronized with the
++    // client prediction path and is never set by the player-facing command.
++    U32                                web_swing_test_no_attach : 1;
+ } ServerControlState;
+ 
+ 
+diff --git a/Common/cmdparse/cmdenum.h b/Common/cmdparse/cmdenum.h
+index bb06f3cc12e48cfa35ec58011014ee369c177a34..2735e9a5ac513c25477d9032a7ceeca39107f01a 100644
+--- a/Common/cmdparse/cmdenum.h
++++ b/Common/cmdparse/cmdenum.h
+@@ -403,6 +403,10 @@ enum
+     SCMD_CLEAR_STATS,
+     SCMD_KIOSK,
+     SCMD_NOJUMPREPEAT,
++    SCMD_WEBSWING,
++    SCMD_WEBSWING_TOGGLE,
++    SCMD_WEBSWING_BACKEND,
++    SCMD_WEBSWING_TEST_NO_ATTACH,
+     SCMD_MISSIONX,
+     SCMD_MISSIONXMAP,
+     SCMD_SOUVENIRCLUE_GET,
+diff --git a/Common/entity/motion.h b/Common/entity/motion.h
+index bfb804575f26bafb20331fa879a2fe9a897f0cde..205e3c97a5a67407aa1f76feeea4f791d312d20f 100644
+--- a/Common/entity/motion.h
++++ b/Common/entity/motion.h
+@@ -11,6 +11,17 @@ typedef struct DefTracker DefTracker;
+ #define NO_BOUNCE 0
+ #define DO_BOUNCE 1
+ 
++// When Web Swing is armed but not attached, traversal should feel like the
++// game's athletic/Ninja mobility family without forcing the Ninja running
++// stance.  Physics gets the mobility benefit; the sequencer selectively reuses
++// the stock Ninja jump only while airborne.
++#define WEB_LAUNCH_JUMP_HEIGHT_SCALE 5.50f
++// Match the *kind* of modifier used by Athletic/Ninja Run: raise the native
++// upward jump-input speed instead of replacing CoH's jump with a scripted
++// constant-velocity launch.  This is intentionally separate from max height.
++#define WEB_LAUNCH_JUMP_UP_SPEED_SCALE 2.10f
++#define WEB_TRAVERSAL_RUN_SPEED_SCALE 1.35f
++
+ typedef struct GlobalMotionState {
+     int        noEntCollisions;
+     int        noDynamicCollisions;
+@@ -32,6 +43,25 @@ typedef struct SurfaceParams
+     F32        max_speed;
+ } SurfaceParams;
+ 
++typedef enum WebSwingAssistPhase
++{
++    WEB_SWING_ASSIST_NONE = 0,
++    WEB_SWING_ASSIST_LAUNCH,
++    WEB_SWING_ASSIST_ASCEND,
++    WEB_SWING_ASSIST_APEX,
++    WEB_SWING_ASSIST_DESCEND,
++    WEB_SWING_ASSIST_BOTTOM,
++} WebSwingAssistPhase;
++
++typedef enum WebSwingVisualTetherState
++{
++    WEB_SWING_VISUAL_TETHER_HIDDEN = 0,
++    WEB_SWING_VISUAL_TETHER_EXTENDING,
++    WEB_SWING_VISUAL_TETHER_ATTACHED,
++    WEB_SWING_VISUAL_TETHER_RETRACTING,
++    WEB_SWING_VISUAL_TETHER_GAP,
++} WebSwingVisualTetherState;
++
+ typedef enum SurfParamIndex
+ {
+     SURFPARAM_GROUND,
+@@ -81,6 +111,12 @@ typedef struct MotionStateInput {
+     U32                    no_ent_collision: 1;
+     U32                    stunned            : 1;
+     U32                    jump_released    : 1;
++    U32                    web_swing_enabled: 1;
++    U32                    web_swing_backend: 1;
++    // Raw physical Space state from ControlState.  Do not infer this from
++    // input.vel[1]: jump-repeat and jump-height logic are allowed to rewrite
++    // upward velocity while the key itself has not changed state.
++    U32                    web_swing_jump_button_down: 1;
+ } MotionStateInput;
+ 
+ typedef struct MotionState
+@@ -122,6 +158,91 @@ typedef struct MotionState
+     S32                    low_traction_steps_remaining;    // # of phys steps to force low traction.
+     F32                    hitStumbleTractionLoss;
+ 
++    U32                    web_swing_attached : 1;
++    U32                    web_swing_attach_catch_pending : 1;
++    U32                    web_swing_attach_grounded : 1;
++    U32                    web_swing_attach_falling : 1;
++    U32                    web_swing_attach_jumping : 1;
++    U32                    web_swing_diag_latched : 1;
++    U32                    web_swing_state_diag_latched : 1;
++    U32                    web_swing_chain_armed : 1;
++    U32                    web_swing_chain_ascent_seen : 1;
++    U32                    web_swing_next_anchor_valid : 1;
++    U32                    web_swing_ground_launch_active : 1;
++    U32                    web_swing_active_backend : 1;
++    U32                    web_swing_visual_tether_visible : 1;
++    U32                    web_swing_visual_tether_left_hand : 1;
++    U32                    web_swing_anim_shoot_active : 1;
++    U32                    web_swing_assist_swoop_active : 1;
++    U32                    web_swing_jump_commit_active : 1;
++    U32                    web_swing_jump_button_was_down : 1;
++    U32                    web_swing_second_press_armed : 1;
++    U32                    web_swing_assist_phase;
++    U32                    web_swing_assist_phase_ticks;
++    U32                    web_swing_assist_cycle_id;
++    U32                    web_swing_visual_tether_gap_ticks;
++    U32                    web_swing_visual_tether_shoot_ticks;
++    U32                    web_swing_anim_catch_ticks;
++    U32                    web_swing_anim_release_ticks;
++    U32                    web_swing_release_diag_stage;
++    U32                    web_swing_release_diag_tick;
++    Vec3                   web_swing_release_pre_velocity;
++    U32                    web_swing_visual_tether_state;
++    F32                    web_swing_visual_tether_progress;
++    F32                    web_swing_visual_tether_shoot_time;
++    F32                    web_swing_jump_commit_speed;
++    F32                    web_swing_assist_energy;
++    F32                    web_swing_assist_initial_low_point_y;
++    F32                    web_swing_assist_low_point_y;
++    // World-space Y at the instant an assisted pendulum releases.  The next
++    // automatic cast is not allowed until the ballistic stunt has crested and
++    // fallen back to roughly this height, which gives the between-web motion
++    // real breathing room without ratcheting altitude upward every cycle.
++    F32                    web_swing_handoff_release_y;
++    // A release can be observed more than once on the client while predicted
++    // motion/state catches up.  Keep the traversal impulse one-shot for the
++    // authored swing segment instead of adding forward boost repeatedly.
++    U32                    web_swing_handoff_launch_segment_id;
++    F32                    web_swing_assist_swoop_entry_plane_speed;
++    F32                    web_swing_assist_swoop_entry_angle;
++    F32                    web_swing_assist_swoop_radius;
++    U32                    web_swing_assist_swoop_emergency_count;
++    U32                    web_swing_anim_phase;
++    U32                    web_swing_anim_segment_id;
++    U32                    web_swing_anim_phase_segment_id;
++    Vec3                   web_swing_anchor;
++    Vec3                   web_swing_previous_anchor;
++    Vec3                   web_swing_next_anchor;
++    F32                    web_swing_next_anchor_retention;
++    U32                    web_swing_chain_search_tick;
++    F32                    web_swing_ground_launch_origin_y;
++    U32                    web_swing_ground_launch_ticks;
++    F32                    web_swing_rope_length;
++    U32                    web_swing_log_tick;
++    U32                    web_swing_constraint_samples;
++    U32                    web_swing_constraint_soft_correction_count;
++    U32                    web_swing_constraint_correction_count;
++    F32                    web_swing_constraint_error_sum;
++    F32                    web_swing_constraint_max_error;
++    F32                    web_swing_constraint_correction_sum;
++    F32                    web_swing_constraint_max_correction;
++    F32                    web_swing_constraint_max_velocity_dir_delta;
++    F32                    web_swing_constraint_velocity_dir_delta_sum;
++    U32                    web_swing_constraint_velocity_dir_delta_large_count;
++    U32                    web_swing_constraint_velocity_dir_delta_large_run;
++    U32                    web_swing_constraint_max_velocity_dir_delta_large_run;
++    U32                    web_swing_constraint_radial_velocity_removed_count;
++    U32                    web_swing_constraint_radial_velocity_large_count;
++    F32                    web_swing_constraint_radial_velocity_removed_sum;
++    F32                    web_swing_constraint_max_radial_velocity_removed;
++
++    // Last terrain values already measured by the Sky-Assisted controller.
++    // These are observation copies, not additional collision queries.
++    F32                    web_swing_assist_current_clearance;
++    F32                    web_swing_assist_ahead_clearance;
++    F32                    web_swing_assist_lookahead_distance;
++    F32                    web_swing_assist_altitude_margin;
++
+     EntityCapsule        capsule;
+ 
+     MotionStateInput    input;
+@@ -144,7 +265,7 @@ int velIsZero(Vec3 vel);
+ int entCanSetPYR( Entity *e );
+ int entCanSetInpVel( Entity *e );
+ void entMoveNoColl(Entity *e);
+-void entMotion(Entity* e, const Mat3 control_mat);
++void entMotion(Entity* e, const Mat3 control_mat, int web_swing_test_no_attach);
+ bool isEntCurrentlyCollidable( Entity * e );
+ void setNoCollideOnTracker( DefTracker * tracker, int set );
+ // End mkproto

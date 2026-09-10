@@ -1,0 +1,55 @@
+warning: in the working copy of 'Game/src/UI/uiTray.c', LF will be replaced by CRLF the next time Git touches it
+diff --git a/Game/src/UI/uiTray.c b/Game/src/UI/uiTray.c
+index ddc00c21a97f4b83ef69106a8873e75c03c872e0..395a536a755619119d0d5fe2de81912c45b3b148 100644
+--- a/Game/src/UI/uiTray.c
++++ b/Game/src/UI/uiTray.c
+@@ -25,6 +25,8 @@
+ #include "assert.h"
+ #include "UI/uiInput.h"
+ #include "cmdparse/cmdgame.h"
++#include "cmdparse/cmdcommon.h"
++#include "cmdparse/cmdcontrols.h"
+ #include "language/langClientUtil.h"
+ #include "entity/PowerInfo.h"
+ #include "entity/entity_power_client.h"           // for entity_ActivatePowerSend
+@@ -1325,6 +1327,11 @@ bool trayslot_istype( Entity *e, int slot_num, int tray_num, TrayItemType type)
+ //
+ int trayslot_IsActive(Entity *e, TrayObj * to)
+ {    
++    if( to && IS_TRAY_MACRO(to->type) && !stricmp(to->command, "webswingtoggle") )
++    {
++        return control_state.server_state && control_state.server_state->web_swing;
++    }
++
+     if( to && to->type == kTrayItemType_Power )
+     {
+         PowerRef ppowRef;
+@@ -2255,10 +2262,25 @@ void trayslot_drawIcon( TrayObj * ts, float xp, float yp, float zp, float scale,
+         display_sprite( ap, xp - ap->width*ts->scale*sc*scale/2, yp - ap->width*ts->scale*sc*scale/2, zp + 3, ts->scale*scale*sc, ts->scale*scale*sc, autoColor );
+     }
+ 
+-    if( trayslot_IsActive( e, ts ) && type == kTrayItemType_Power )
++    if( trayslot_IsActive( e, ts ) )
+     {
+-        const Power *power = character_GetPowerFromArrayIndices(e->pchar, ts->iset, ts->ipow);
+-        float angle = activePowerTimer_getAngle(power->ppowBase);
++        float angle;
++
++        if( type == kTrayItemType_Power )
++        {
++            const Power *power = character_GetPowerFromArrayIndices(e->pchar, ts->iset, ts->ipow);
++            angle = activePowerTimer_getAngle(power->ppowBase);
++        }
++        else
++        {
++            // Web Swing is a server-backed travel toggle surfaced through a
++            // persistent macro because this source dump does not contain the
++            // editable powers data. Reuse the normal active-power spin ring so
++            // the button reads like a real toggle without inventing a dummy
++            // BasePower or affecting ordinary macros.
++            ts->angle -= TIMESTEP * 0.075f;
++            angle = ts->angle;
++        }
+ 
+         display_rotated_sprite( spin, xp - spin->width*scale/2, yp - spin->width*scale/2, zp+5, scale, scale, clr, angle, 1 );
+     }

@@ -1,0 +1,669 @@
+﻿// Issue 36 Web Swing ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â Male ascend hold via Mixamo 30-40 + frame-40 Scale 0
+// V2 remains Male ATTACHED/DESCEND. Mixamo bottom 18-22 stays. Generic
+// WEBSWING_ASCEND is the safe V1 fallback for Fem/Huge and for Male when
+// helper bits are absent. The helper moves implement the one-shot + hold
+// semantic without touching Fem/Huge, physics, or exporter math.
+
+Move WEBSWING_AIRBORNE
+	Interpolate 5
+	Priority 20
+	Type Male
+		Anim MALE/AIR_MA_IRONKICK 34 84
+	TEnd
+	Type Huge
+		Anim HUGE/AIR_MA_IRONKICK 34 84
+	TEnd
+	Type Fem
+		Anim FEM/AIR_MA_IRONKICK 34 84
+	TEnd
+	Member "<WEBSWING_ANIM>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>", "<MOVEIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_MALE_ASCEND>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires WEBSWING_AIRBORNE
+	Flags Cycle
+MEnd
+
+Move WEBSWING_ATTACHED
+	Interpolate 5
+	Priority 20
+	Type Male
+		Anim MALE/COHSOURCEDEV_WEBSWING_STRETCH_V2 1 30
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_STRETCH 1 30
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_STRETCH 1 30
+	TEnd
+	Member "<WEBSWING_ANIM>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>", "<MOVEIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_MALE_ASCEND>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires WEBSWING_ATTACHED
+	Flags Cycle
+MEnd
+
+Move WEBSWING_DESCEND
+	Interpolate 5
+	Priority 22
+	Type Male
+		Anim MALE/COHSOURCEDEV_WEBSWING_STRETCH_V2 1 30
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_STRETCH 1 30
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_STRETCH 1 30
+	TEnd
+	Member "<WEBSWING_ANIM>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>", "<MOVEIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_MALE_ASCEND>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_ATTACHED", "WEBSWING_DESCEND"
+	Flags Cycle
+MEnd
+
+Move WEBSWING_BOTTOM
+	Interpolate 5
+	Priority 22
+	Type Male
+		Anim MALE/COHSOURCEDEV_RETARGET_RESTBASIS_BOTTOM 1 5
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_TUCK 1 24
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_TUCK 1 24
+	TEnd
+	Member "<WEBSWING_ANIM>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>", "<MOVEIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_MALE_ASCEND>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_ATTACHED", "WEBSWING_BOTTOM"
+	Flags Cycle
+MEnd
+
+Move WEBSWING_ASCEND
+	Interpolate 5
+	Priority 22
+	Type Male
+		Anim MALE/COHSOURCEDEV_WEBSWING_ASCEND 1 28
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_ASCEND 1 28
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_ASCEND 1 28
+	TEnd
+	Member "<WEBSWING_ANIM>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>", "<MOVEIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_ATTACHED", "WEBSWING_ASCEND"
+	Flags Cycle
+MEnd
+
+Move WEBSWING_ASCEND_MALE_START
+	Interpolate 5
+	Priority 23
+	NextMove WEBSWING_ASCEND_MALE_HOLD
+	Type Male
+		Anim MALE/COHSOURCEDEV_RETARGET_SWING_FULL 30 40
+	TEnd
+	Member "<WEBSWING_MALE_ASCEND>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>", "<MOVEIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_ATTACHED", "WEBSWING_ASCEND", "WEBSWING_MALE", "WEBSWING_ASCEND_MALE_ENTER"
+MEnd
+
+Move WEBSWING_ASCEND_MALE_HOLD
+	Interpolate 5
+	Priority 23
+	Scale 0
+	Type Male
+		Anim MALE/COHSOURCEDEV_RETARGET_SWING_FULL 40 60
+	TEnd
+	Member "<WEBSWING_MALE_ASCEND>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>", "<MOVEIRQ>"
+	Requires "WEBSWING_ATTACHED", "WEBSWING_ASCEND", "WEBSWING_MALE"
+	Flags Cycle
+MEnd
+
+// webswinganim 3 ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â MALE_FULL_CORRECTED. AIRBORNE+ATTACHED is the private
+// mode discriminator; WEBSWING_ASCEND_MALE_ENTER is pulsed on every mode-3
+// phase entry. Phase-specific moves outrank the generic attached helpers so
+// their shared ATTACHED requirement cannot make both families alternate.
+// They intentionally are not MOVEIRQ members: stock FFLY_PREFALL interrupts
+// that group even at lower priority, which otherwise makes authored moves and
+// the stock fall move replace each other every sequencer update. Cycle HOLDs
+// still fall back through their NextMove when their Web Swing requirements
+// clear, while STARTs finish their short authored window before doing so.
+// Each authored phase START is itself the cycle owner. It remains selected
+// until the controller changes phase, avoiding the START -> HOLD -> stock
+// fallback race that let READY/profile moves replace the swing midair.
+
+// V2 web-cycle choreography. Ground activation retains the complete authored
+// crouch -> one-hand shot -> two-hand catch/pull clip. Repeated cycles are now
+// owned by the event/phase moves below; the older RETRACT/SHOOT moves remain as
+// preserved comparison data but mode 3 no longer raises their private bits.
+// Physics stays controller-driven, and only the initial street boost waits
+// for its web to visibly attach. No V2 HOLD is a static pose.
+
+Move WEBSWING_V2_GROUND_LAUNCH_START
+	Interpolate 4
+	Priority 50
+	NextMove WEBSWING_V2_GROUND_LAUNCH_HOLD
+	Type Male
+		Anim MALE/NINJA_JUMP 3 10
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_NINJA_JUMP_V1 3 10
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_NINJA_JUMP_V1 3 10
+	TEnd
+	Member "<WEBSWING_V2_GROUND_LAUNCH>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_MALE_FULL_CORRECTED>", "<WEBSWING_V2_PHASED>", "<WEBSWING_V2_GROUND_LAUNCH>", "<WEBSWING_V2_RETRACT>", "<WEBSWING_V2_SHOOT>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_ATTACHED", "WEBSWING_MALE", "WEBSWING_SHOOT", "WEBSWING_GROUND_LAUNCH", "WEBSWING_ASCEND_MALE_ENTER"
+MEnd
+
+Move WEBSWING_V2_GROUND_LAUNCH_HOLD
+	Interpolate 4
+	Priority 24
+	Type Male
+		Anim MALE/NINJA_JUMP 6 40
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_NINJA_JUMP_V1 6 40
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_NINJA_JUMP_V1 6 40
+	TEnd
+	Member "<WEBSWING_V2_GROUND_LAUNCH>", "<WEBSWING_MALE_FULL_CORRECTED>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_ATTACHED", "WEBSWING_MALE", "WEBSWING_GROUND_LAUNCH"
+	Flags Cycle
+MEnd
+
+// V2 phase choreography. These moves react to the visible web lifecycle and
+// assisted-controller phase; none of them owns world-space orientation or
+// velocity. A/B alternates are deterministic per assisted cycle.
+
+Move WEBSWING_V2_REACH_A
+	Interpolate 4
+	Priority 34
+	Scale 0.65
+	Type Male
+		Anim MALE/COHSOURCEDEV_WEBSWING_SHOOT_V2 11 26
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_SHOOT_V2 11 26
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_SHOOT_V2 11 26
+	TEnd
+	Member "<WEBSWING_V2_PHASED>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_MALE_FULL_CORRECTED>", "<WEBSWING_V2_PHASED>", "<WEBSWING_V2_RETRACT>", "<WEBSWING_V2_SHOOT>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_MALE", "WEBSWING_SHOOT"
+	Flags Cycle, HoldLastFrame
+MEnd
+
+Move WEBSWING_V2_REACH_B
+	Interpolate 4
+	Priority 35
+	Scale 0.65
+	Type Male
+		Anim MALE/COHSOURCEDEV_WEBSWING_COMPACT_V2 1 10
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_COMPACT_V2 1 10
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_COMPACT_V2 1 10
+	TEnd
+	Member "<WEBSWING_V2_PHASED>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_MALE_FULL_CORRECTED>", "<WEBSWING_V2_PHASED>", "<WEBSWING_V2_RETRACT>", "<WEBSWING_V2_SHOOT>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_MALE", "WEBSWING_SHOOT", "WEBSWING_VARIANT_B"
+	Flags Cycle, HoldLastFrame
+MEnd
+
+Move WEBSWING_V2_CATCH_A
+	Interpolate 3
+	Priority 36
+	Scale 1.0
+	Type Male
+			Anim MALE/COHSOURCEDEV_WEBSWING_MAIN_V1 27 39
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_MAIN_V1 27 39
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_MAIN_V1 27 39
+	TEnd
+	Member "<WEBSWING_V2_PHASED>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_MALE_FULL_CORRECTED>", "<WEBSWING_V2_PHASED>", "<WEBSWING_V2_RETRACT>", "<WEBSWING_V2_SHOOT>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_MALE", "WEBSWING_ASCEND_MALE_ENTER", "WEBSWING_RETRACT"
+	Flags Cycle, HoldLastFrame
+MEnd
+
+Move WEBSWING_V2_CATCH_B
+	Interpolate 3
+	Priority 37
+	Scale 1.0
+	Type Male
+				Anim MALE/COHSOURCEDEV_WEBSWING_MAIN_V1 27 39
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_MAIN_V1 27 39
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_MAIN_V1 27 39
+	TEnd
+	Member "<WEBSWING_V2_PHASED>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_MALE_FULL_CORRECTED>", "<WEBSWING_V2_PHASED>", "<WEBSWING_V2_RETRACT>", "<WEBSWING_V2_SHOOT>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_MALE", "WEBSWING_ASCEND_MALE_ENTER", "WEBSWING_RETRACT", "WEBSWING_VARIANT_B"
+	Flags Cycle, HoldLastFrame
+MEnd
+
+Move WEBSWING_V2_RELEASE_A
+	Interpolate 5
+	Priority 34
+	Scale 0.65
+	Type Male
+		Anim MALE/COHSOURCEDEV_WEBSWING_RELEASE_V2 1 14
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_RELEASE_V2 1 14
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_RELEASE_V2 1 14
+	TEnd
+	Member "<WEBSWING_V2_PHASED>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_MALE_FULL_CORRECTED>", "<WEBSWING_V2_PHASED>", "<WEBSWING_V2_RETRACT>", "<WEBSWING_V2_SHOOT>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_MALE", "WEBSWING_RETRACT"
+MEnd
+
+Move WEBSWING_V2_RELEASE_B
+	Interpolate 5
+	Priority 35
+	Scale 0.65
+	// Front-flip handoff cleanup: the old COMPACT_V2 39..50 release carries a
+	// large HIPS yaw/roll component that reads as a brief sideways blip before
+	// NINJA_HOP commits to its sagittal front flip.  Reuse the already-clean
+	// Release A pop-off for Male while we keep the actual A/B flip clips and
+	// selection logic unchanged.  If hand-parity needs preserving later, build a
+	// dedicated B release from the same pose with only the tether-hand arm swap.
+	Type Male
+		Anim MALE/COHSOURCEDEV_WEBSWING_RELEASE_V2 1 14
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_RELEASE_V2 1 14
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_RELEASE_V2 1 14
+	TEnd
+	Member "<WEBSWING_V2_PHASED>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_MALE_FULL_CORRECTED>", "<WEBSWING_V2_PHASED>", "<WEBSWING_V2_RETRACT>", "<WEBSWING_V2_SHOOT>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_MALE", "WEBSWING_RETRACT", "WEBSWING_VARIANT_B"
+MEnd
+
+Move WEBSWING_V2_AIRBORNE_A
+	Interpolate 5
+	Priority 38
+	// Ninja Run frontflip. Raw runtime keys show the opposite-signed 329.7-degree
+	// sagittal somersault is concentrated in 82..98.  At Scale 0.65 the rotation
+	// lasts ~0.82 s, matching the measured between-web GAP without using landing frames.
+	Scale 0.65
+	Type Male
+		Anim MALE/NINJA_HOP 82 98
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_NINJA_HOP_V1 82 98
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_NINJA_HOP_V1 82 98
+	TEnd
+	Member "<WEBSWING_V2_PHASED>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_MALE_FULL_CORRECTED>", "<WEBSWING_V2_PHASED>", "<WEBSWING_V2_RETRACT>", "<WEBSWING_V2_SHOOT>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_MALE", "WEBSWING_SHOOT", "WEBSWING_RETRACT"
+	Flags Cycle, HoldLastFrame
+MEnd
+
+Move WEBSWING_V2_AIRBORNE_B
+	Interpolate 5
+	Priority 39
+	// Ninja Run backflip. Raw runtime keys show a 339.8-degree sagittal rotation
+	// in 66..88; later frames are fall/landing posture.  Scale 0.90 stretches the
+	// actual rotation to ~0.82 s so it breathes across the full free-flight gap.
+	Scale 0.90
+	Type Male
+		Anim MALE/NINJA_JUMP 66 88
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_NINJA_JUMP_V1 66 88
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_NINJA_JUMP_V1 66 88
+	TEnd
+	Member "<WEBSWING_V2_PHASED>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_MALE_FULL_CORRECTED>", "<WEBSWING_V2_PHASED>", "<WEBSWING_V2_RETRACT>", "<WEBSWING_V2_SHOOT>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_MALE", "WEBSWING_SHOOT", "WEBSWING_RETRACT", "WEBSWING_FLIP_BACK"
+	Flags Cycle, HoldLastFrame
+MEnd
+
+Move WEBSWING_V2_RETRACT_START
+	Interpolate 8
+	Priority 29
+	Scale 0.65
+	NextMove WEBSWING_V2_RETRACT_HOLD
+	Type Male
+		Anim MALE/COHSOURCEDEV_WEBSWING_GROUND_LAUNCH_V2 1 62
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_GROUND_LAUNCH_V2 1 62
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_GROUND_LAUNCH_V2 1 62
+	TEnd
+	Member "<WEBSWING_V2_RETRACT>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_MALE_FULL_CORRECTED>", "<WEBSWING_V2_RETRACT>", "<WEBSWING_V2_SHOOT>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_ATTACHED", "WEBSWING_MALE", "WEBSWING_RETRACT", "WEBSWING_ASCEND_MALE_ENTER"
+MEnd
+
+Move WEBSWING_V2_RETRACT_HOLD
+	Interpolate 2
+	Priority 28
+	Scale 0.5
+	Type Male
+		Anim MALE/COHSOURCEDEV_WEBSWING_GROUND_LAUNCH_V2 54 62
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_GROUND_LAUNCH_V2 54 62
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_GROUND_LAUNCH_V2 54 62
+	TEnd
+	Member "<WEBSWING_V2_RETRACT>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_ATTACHED", "WEBSWING_MALE", "WEBSWING_RETRACT"
+	Flags Cycle
+MEnd
+
+Move WEBSWING_V2_SHOOT_START
+	Interpolate 3
+	Priority 29
+	Type Male
+		Anim MALE/COHSOURCEDEV_WEBSWING_SHOOT_V2 1 26
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_SHOOT_V2 1 26
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_SHOOT_V2 1 26
+	TEnd
+	Member "<WEBSWING_V2_SHOOT>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_MALE_FULL_CORRECTED>", "<WEBSWING_V2_RETRACT>", "<WEBSWING_V2_SHOOT>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_ATTACHED", "WEBSWING_MALE", "WEBSWING_SHOOT"
+	Flags Cycle
+MEnd
+
+Move WEBSWING_V2_SHOOT_HOLD
+	Interpolate 3
+	Priority 28
+	Scale 0.5
+	Type Male
+		Anim MALE/COHSOURCEDEV_WEBSWING_SHOOT_V2 21 26
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_SHOOT_V2 21 26
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_SHOOT_V2 21 26
+	TEnd
+	Member "<WEBSWING_V2_SHOOT>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_ATTACHED", "WEBSWING_MALE", "WEBSWING_SHOOT"
+	Flags Cycle
+MEnd
+
+// Mode-3 Sky-Assisted core. Physics phase bits remain available for
+// diagnostics, but this one move owns DESCEND -> BOTTOM -> ASCEND so normal
+// phase changes cannot reset the authored cursor. It contains no sequencer FX;
+// the client advances its frame through phase-aware physical-angle curves after
+// seqStep (including both sides of the ASCEND velocity-angle peak).
+Move WEBSWING_FULL_CORE
+	Interpolate 4
+	Priority 28
+	Scale 0
+	Type Male
+		Anim MALE/COHSOURCEDEV_WEBSWING_MAIN_V1 34 62
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_MAIN_V1 34 62
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_MAIN_V1 34 62
+	TEnd
+	Member "<WEBSWING_MALE_FULL_CORRECTED>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_MALE_FULL_CORRECTED>", "<WEBSWING_V2_PHASED>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_ATTACHED", "WEBSWING_MALE", "WEBSWING_CORE_SYNC"
+	Flags Cycle
+MEnd
+
+Move WEBSWING_FULL_ATTACHED_START
+	Interpolate 5
+	Priority 25
+	Scale 0.35
+	Type Male
+			Anim MALE/COHSOURCEDEV_WEBSWING_MAIN_V1 34 39
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_MAIN_V1 34 39
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_MAIN_V1 34 39
+	TEnd
+	Member "<WEBSWING_MALE_FULL_CORRECTED>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_V2_PHASED>", "<WEBSWING_V2_SHOOT>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_ATTACHED", "WEBSWING_MALE"
+	Flags Cycle, HoldLastFrame
+MEnd
+
+Move WEBSWING_FULL_ATTACHED_HOLD
+	Interpolate 5
+	Priority 24
+	Scale 0.35
+	Type Male
+			Anim MALE/COHSOURCEDEV_WEBSWING_MAIN_V1 34 39
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_MAIN_V1 34 39
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_MAIN_V1 34 39
+	TEnd
+	Member "<WEBSWING_MALE_FULL_CORRECTED>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_ATTACHED", "WEBSWING_MALE"
+	Flags Cycle
+MEnd
+
+Move WEBSWING_FULL_DESCEND_START
+	Interpolate 6
+	Priority 26
+	Scale 0.55
+	Type Male
+			Anim MALE/COHSOURCEDEV_WEBSWING_MAIN_V1 39 49
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_MAIN_V1 39 49
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_MAIN_V1 39 49
+	TEnd
+	Member "<WEBSWING_MALE_FULL_CORRECTED>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_MALE_FULL_CORRECTED>", "<WEBSWING_V2_PHASED>", "<WEBSWING_V2_RETRACT>", "<WEBSWING_V2_SHOOT>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_ATTACHED", "WEBSWING_DESCEND", "WEBSWING_MALE"
+	Flags Cycle, HoldLastFrame
+MEnd
+
+Move WEBSWING_FULL_DESCEND_HOLD
+	Interpolate 5
+	Priority 25
+	Scale 0.55
+	Type Male
+			Anim MALE/COHSOURCEDEV_WEBSWING_MAIN_V1 39 49
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_MAIN_V1 39 49
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_MAIN_V1 39 49
+	TEnd
+	Member "<WEBSWING_MALE_FULL_CORRECTED>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_ATTACHED", "WEBSWING_DESCEND", "WEBSWING_MALE"
+	Flags Cycle
+MEnd
+
+Move WEBSWING_FULL_BOTTOM_START
+	Interpolate 5
+	Priority 26
+	Scale 0.70
+	Type Male
+			Anim MALE/COHSOURCEDEV_WEBSWING_MAIN_V1 49 53
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_MAIN_V1 49 53
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_MAIN_V1 49 53
+	TEnd
+	Member "<WEBSWING_MALE_FULL_CORRECTED>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_MALE_FULL_CORRECTED>", "<WEBSWING_V2_PHASED>", "<WEBSWING_V2_RETRACT>", "<WEBSWING_V2_SHOOT>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_ATTACHED", "WEBSWING_BOTTOM", "WEBSWING_MALE"
+	Flags Cycle, HoldLastFrame
+MEnd
+
+Move WEBSWING_FULL_BOTTOM_HOLD
+	Interpolate 5
+	Priority 25
+	Scale 0.70
+	Type Male
+			Anim MALE/COHSOURCEDEV_WEBSWING_MAIN_V1 49 53
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_MAIN_V1 49 53
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_MAIN_V1 49 53
+	TEnd
+	Member "<WEBSWING_MALE_FULL_CORRECTED>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_ATTACHED", "WEBSWING_BOTTOM", "WEBSWING_MALE"
+	Flags Cycle
+MEnd
+
+Move WEBSWING_FULL_ASCEND_START
+	Interpolate 5
+	Priority 26
+	Scale 0.55
+	Type Male
+			Anim MALE/COHSOURCEDEV_WEBSWING_MAIN_V1 53 62
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_MAIN_V1 53 62
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_MAIN_V1 53 62
+	TEnd
+	Member "<WEBSWING_MALE_FULL_CORRECTED>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_MALE_FULL_CORRECTED>", "<WEBSWING_V2_PHASED>", "<WEBSWING_V2_SHOOT>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_ATTACHED", "WEBSWING_ASCEND", "WEBSWING_MALE"
+	Flags Cycle, HoldLastFrame
+MEnd
+
+Move WEBSWING_FULL_ASCEND_HOLD
+	Interpolate 5
+	Priority 25
+	Scale 0.55
+	Type Male
+			Anim MALE/COHSOURCEDEV_WEBSWING_MAIN_V1 53 62
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_MAIN_V1 53 62
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_MAIN_V1 53 62
+	TEnd
+	Member "<WEBSWING_MALE_FULL_CORRECTED>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_ATTACHED", "WEBSWING_ASCEND", "WEBSWING_MALE"
+	Flags Cycle
+MEnd
+
+Move WEBSWING_FULL_ATTACHED_ALT
+	Interpolate 5
+	Priority 27
+	Scale 0.50
+	Type Male
+			Anim MALE/COHSOURCEDEV_WEBSWING_MAIN_V1 34 39
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_MAIN_V1 34 39
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_MAIN_V1 34 39
+	TEnd
+	Member "<WEBSWING_MALE_FULL_CORRECTED>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_V2_PHASED>", "<WEBSWING_V2_RETRACT>", "<WEBSWING_V2_SHOOT>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_ATTACHED", "WEBSWING_MALE", "WEBSWING_VARIANT_B"
+	Flags Cycle, HoldLastFrame
+MEnd
+
+Move WEBSWING_FULL_DESCEND_ALT
+	Interpolate 6
+	Priority 27
+	Scale 0.55
+	Type Male
+			Anim MALE/COHSOURCEDEV_WEBSWING_MAIN_V1 39 49
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_MAIN_V1 39 49
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_MAIN_V1 39 49
+	TEnd
+	Member "<WEBSWING_MALE_FULL_CORRECTED>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_MALE_FULL_CORRECTED>", "<WEBSWING_V2_PHASED>", "<WEBSWING_V2_RETRACT>", "<WEBSWING_V2_SHOOT>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_ATTACHED", "WEBSWING_DESCEND", "WEBSWING_MALE", "WEBSWING_VARIANT_B"
+	Flags Cycle, HoldLastFrame
+MEnd
+
+Move WEBSWING_FULL_BOTTOM_ALT
+	Interpolate 4
+	Priority 27
+	Scale 0.70
+	Type Male
+			Anim MALE/COHSOURCEDEV_WEBSWING_MAIN_V1 49 53
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_MAIN_V1 49 53
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_MAIN_V1 49 53
+	TEnd
+	Member "<WEBSWING_MALE_FULL_CORRECTED>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_MALE_FULL_CORRECTED>", "<WEBSWING_V2_PHASED>", "<WEBSWING_V2_RETRACT>", "<WEBSWING_V2_SHOOT>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_ATTACHED", "WEBSWING_BOTTOM", "WEBSWING_MALE", "WEBSWING_VARIANT_B"
+	Flags Cycle, HoldLastFrame
+MEnd
+
+Move WEBSWING_FULL_ASCEND_ALT
+	Interpolate 5
+	Priority 27
+	Scale 0.55
+	Type Male
+			Anim MALE/COHSOURCEDEV_WEBSWING_MAIN_V1 53 62
+	TEnd
+	Type Huge
+		Anim HUGE/COHSOURCEDEV_WEBSWING_MAIN_V1 53 62
+	TEnd
+	Type Fem
+		Anim FEM/COHSOURCEDEV_WEBSWING_MAIN_V1 53 62
+	TEnd
+	Member "<WEBSWING_MALE_FULL_CORRECTED>", "<DEATHIRQ>", "<HITIRQ>", "<REACTIRQ>", "<BLOCKIRQ>", "<BLOCK>", "<STUNMOVE>", "<ATTACKIRQ>"
+	Interrupts "<WEBSWING_ANIM>", "<WEBSWING_MALE_FULL_CORRECTED>", "<WEBSWING_V2_PHASED>", "<WEBSWING_V2_RETRACT>", "<WEBSWING_V2_SHOOT>", "<JUMPS>", "<FALL>", "<GROUNDMOVEALL>"
+	Requires "WEBSWING_AIRBORNE", "WEBSWING_ATTACHED", "WEBSWING_ASCEND", "WEBSWING_MALE", "WEBSWING_VARIANT_B"
+	Flags Cycle, HoldLastFrame
+MEnd
+

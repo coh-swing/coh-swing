@@ -1,0 +1,2962 @@
+warning: in the working copy of 'Common/player/pmotion.h', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Game/src/cmdparse/cmdgame.c', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Game/src/entity/entclient.c', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Game/src/entity/entclient.h', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Game/src/game.c', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Game/src/graphics/gfx.c', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Game/src/main.c', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Game/src/player/player.c', LF will be replaced by CRLF the next time Git touches it
+diff --git a/Common/player/pmotion.h b/Common/player/pmotion.h
+index f2d2722119dbe7c37b5714f2c60bb600f1546edb..d637afcd69130f99b33e07d11a3395a038cf5602 100644
+--- a/Common/player/pmotion.h
++++ b/Common/player/pmotion.h
+@@ -43,6 +43,29 @@ extern GlobalPlayerMotionState global_pmotion_state;
+ extern StashTable g_htAttackVolumes;
+ #ifdef CLIENT
+ extern char *g_activeMaterialTrackerName;
++typedef struct WebSwingAnimationSyncTelemetry
++{
++    char move_name[64];
++    F32 frame;
++    F32 first_frame;
++    F32 last_frame;
++    F32 normalized_progress;
++    int sync_active;
++    U32 physical_tick;
++    char physical_phase[16];
++    F32 physical_angle_degrees;
++    F32 physical_plane_speed;
++    F32 physical_horizontal_speed;
++    F32 target_frame;
++    F32 target_normalized_progress;
++    F32 sync_error_frames;
++    U32 core_restart_count;
++    U32 backwards_target_steps;
++} WebSwingAnimationSyncTelemetry;
++
++void pmotionWebSwingCaptureSetAnimationSyncTelemetry(
++    const WebSwingAnimationSyncTelemetry *telemetry);
++void pmotionWebSwingCaptureRenderHud(void);
+ #endif
+ 
+ #define entMode(e,mode_num) ( (e)->state.mode & ( 1 << (mode_num) ) )
+diff --git a/Game/src/cmdparse/cmdgame.c b/Game/src/cmdparse/cmdgame.c
+index f3a2db1d807edac96ed6bd577a5115664915233f..e9508337b37bcc14360c78107d2eee6cc04af8a8 100644
+--- a/Game/src/cmdparse/cmdgame.c
++++ b/Game/src/cmdparse/cmdgame.c
+@@ -86,6 +86,8 @@
+ #include "UI/uiKeybind.h"
+ #include "UI/uiTray.h"
+ #include <utilitieslib/version/AppVersion.h>
++#include <utilitieslib/version/AppRegCache.h>
++#include <utilitieslib/utils/RegistryReader.h>
+ #include "graphics/truetype/ttDebug.h"
+ #include <utilitieslib/network/netio.h>
+ #include "comm_game.h"
+@@ -460,6 +462,7 @@ enum
+     CMD_DEMOSTOP,
+     CMD_DEMODUMPTGA,
+     CMD_NOP,
++    CMD_WEBSWING_STYLE,
+     CMD_MACRO,
+     CMD_MACRO_SLOT,
+     CMD_MANAGE_ENHANCEMENTS,
+@@ -651,6 +654,7 @@ enum
+     CMD_TOGGLEFIXEDFUNCTIONFP,
+     CMD_TOGGLEFIXEDFUNCTIONVP,
+     CMD_COSTUME_DIFF,
++    CMD_CAMYAWOFFSET,
+     CMD_CAMTURN,
+     CMD_PLAYERTURN,
+     CMD_FACE,
+@@ -1147,6 +1151,8 @@ Cmd game_cmds[] =
+                         "performance testing feature to not draw objects with less than the given number of triangles" },
+     { 0, "camreset", CMD_CAMRESET,{{0}},0,
+                         "Camreset is bound to the PageDown key (default) to reset the camera behind the player." },
++    { 9, "camyawoffset", CMD_CAMYAWOFFSET, {{ PARSETYPE_FLOAT, &tmp_f32 }},CMDF_HIDEPRINT,
++                        "Orbits the third-person camera around the player by the given yaw in degrees." },
+     { 0, "demoplay", CMD_DEMOPLAY, {{ CMDSENTENCE(demo_state.demoname)}},CMDF_HIDEVARS|CMDF_HIDEPRINT,
+                         "Name of demo to play back" },
+     { 0, "demoloop", 0, {{ CMDINT(demo_state.demo_loop) }},CMDF_HIDEPRINT,
+@@ -2170,6 +2176,8 @@ Cmd game_cmds[] =
+                         "Activate an inspiration on a pet by name. Takes Inspiration Name" },
+     { 0, "nop",            CMD_NOP, {{ 0 }}, CMDF_HIDEPRINT,
+                         "does nothing" },
++    { 0, "webswingstyle",  CMD_WEBSWING_STYLE, {{ CMDSTR(tmp_str) }}, CMDF_HIDEVARS,
++                        "Set and save Web Swing visual style: legacy, web, tech, or magic." },
+     { 0, "macro",        CMD_MACRO, {{ CMDSTR(tmp_str)},{ CMDSENTENCE(tmp_str2)}}, CMDF_HIDEVARS,
+                         "Add a macro to first empty slot.\n"
+                         "macro <name> <command"},
+@@ -4435,6 +4443,42 @@ int cmdGameParse(char *str, int x, int y)
+             }
+         xcase CMD_NOP:
+             {}
++        xcase CMD_WEBSWING_STYLE:
++            {
++                int style = -1;
++                const char *message = NULL;
++
++                if(!stricmp(tmp_str, "legacy") || !strcmp(tmp_str, "0"))
++                {
++                    style = 0;
++                    message = "Web Swing visual style: LEGACY.";
++                }
++                else if(!stricmp(tmp_str, "web") || !strcmp(tmp_str, "1"))
++                {
++                    style = 1;
++                    message = "Web Swing visual style: WEB.";
++                }
++                else if(!stricmp(tmp_str, "tech") || !strcmp(tmp_str, "2"))
++                {
++                    style = 2;
++                    message = "Web Swing visual style: TECH.";
++                }
++                else if(!stricmp(tmp_str, "magic") || !strcmp(tmp_str, "3"))
++                {
++                    style = 3;
++                    message = "Web Swing visual style: MAGIC.";
++                }
++
++                if(style < 0)
++                {
++                    addSystemChatMsg("Web Swing style must be legacy, web, tech, or magic.", INFO_USER_ERROR, 0);
++                    break;
++                }
++
++                g_cohsourcedev_webswing_visual_selection = style;
++                registryWriteInt(regGetAppKey(), "WebSwingVisualStyle", (unsigned int)style);
++                addSystemChatMsg(message, INFO_SVR_COM, 0);
++            }
+         xcase CMD_SG_ENTER_PASSCODE:
+ 			if (isMapSelectOpen()) {
+ 				dialogNameEdit(textStd("Enter Supergroup Base Access Passcode:"), NULL, NULL, sgPasscodeDlgHandler, NULL, 30, 0);
+@@ -5536,6 +5580,11 @@ int cmdGameParse(char *str, int x, int y)
+         xcase CMD_PLAYERTURN:
+             control_state.pyr.cur[1] = addAngle(control_state.pyr.cur[1],control_state.cam_pyr_offset[1]);
+             control_state.cam_pyr_offset[1] = 0;
++        xcase CMD_CAMYAWOFFSET:
++            // Deterministic-capture aid: orbit the third-person camera around
++            // the player without touching the player's facing.
++            control_state.cam_pyr_offset[1] = RAD(tmp_f32);
++            cam_info.rotate_scale = 1;
+         xcase CMD_FACE:
+             playerToggleFollowMode();
+             playerDoFollowMode();
+diff --git a/Game/src/entity/entclient.c b/Game/src/entity/entclient.c
+index 76fe88eb759dc911175e57766720d3e8f24331b2..5bb67e880709502e00aa9d242d7af8e15a4dcf41 100644
+--- a/Game/src/entity/entclient.c
++++ b/Game/src/entity/entclient.c
+@@ -5,8 +5,10 @@
+  ***************************************************************************/
+ #include "entity/entity.h"
+ #include "graphics/camera.h"
++#include "cmdparse/cmdcommon.h"
+ #include "cmdparse/cmdgame.h"
+ #include "graphics/FX/fx.h"
++#include "graphics/FX/particle.h"
+ #include <utilitieslib/utils/error.h>
+ #include <utilitieslib/utils/SuperAssert.h>
+ #include "entity/entclient.h"
+@@ -34,6 +36,7 @@
+ #include "entity/entStrings.h"
+ #include "UI/uiWindows.h"
+ #include "group/groupdyn.h"
++#include "group/groupfilelib.h"
+ #include "gameComm/wdwbase.h"
+ #include "entity/character_base.h"
+ #include <utilitieslib/utils/timing.h>
+@@ -56,6 +59,7 @@
+ #include "render/rendershadow.h"
+ #include "render/renderbonedmodel.h"
+ #include "render/rendertree.h"
++#include "render/renderprim.h"
+ #include <utilitieslib/components/Earray.h>
+ #include "player/pmotion.h"
+ #include "group/grouputil.h"
+@@ -79,6 +83,7 @@
+ #include <utilitieslib/components/StashTable.h>
+ #include <utilitieslib/components/mailbox.h>
+ #include "fxinfo.h"
++#include "fxutil.h"
+ #include "graphics/groupdraw.h"
+ #include "gameData/costume_critter.h"
+ #include "entity/motion.h"
+@@ -90,6 +95,7 @@
+ #include "entity/power_customization.h"
+ #include "graphics/gfx.h"
+ #include "render/thread/rt_shadowmap.h"    // for kShadowCapsuleCull
++#include <string.h>
+ 
+ #ifndef TEST_CLIENT
+ #include "edit/edit_cmd.h"
+@@ -2431,6 +2437,19 @@ static const SeqMove * runSequencerMoveUpdate( Entity *e, int *needCostumeApply
+     seqClearState( seq->stance_state );
+     //End Special Trickiness /////////////
+ 
++#ifndef TEST_CLIENT
++    // The authored-animation audition is deliberately injected at the
++    // client sequencer boundary, after per-frame state rebuild and before
++    // normal interrupt search. It is active only for the controlled player
++    // in WebSwingDev, so the physics state builder and server remain untouched.
++    if (global_state.webswing_dev && e == controlledPlayerPtr())
++    {
++        int anim_canary_bit = seqGetStateNumberFromName("COHSOURCEDEV_ANIMCANARY");
++        if (anim_canary_bit >= 0)
++            seqOrState(seq->state, g_cohsourcedev_anim_canary, anim_canary_bit);
++
++    }
++#endif
+ 
+     setMoveStickyStateBits(seq->state, e->move_bits);
+ 
+@@ -2555,9 +2574,10 @@ static const SeqMove * runSequencerMoveUpdate( Entity *e, int *needCostumeApply
+                 consoleSetFGColor( COLOR_BLUE | COLOR_GREEN | COLOR_RED );
+             }
+ #endif
+-            newMove = seqProcessClientInst( seq, animSpeedTimestep, e->move_idx, e->move_updated ) ;
++        newMove = seqProcessClientInst( seq, animSpeedTimestep, e->move_idx, e->move_updated ) ;
+         }
+ 
++
+         if( newMove ) {
+             handleHitReactHack( seq ); //Hack to prefer old move to ready if you just finished a hit react or Block (see findTriggeredMoves() )
+             //if(strlen(e->name)) printf("runSequencerMoveUpdate: entity \"%s\" has new move \"%s\"\n", e->name, newMove->name);
+@@ -2772,6 +2792,444 @@ static void addYSpringToCharacterGraphics( SeqInst * seq )
+     }
+ }
+ 
++typedef struct WebSwingAngleFramePoint
++{
++    F32 angle_degrees;
++    F32 source_frame;
++} WebSwingAngleFramePoint;
++
++typedef struct WebSwingClientAnimationSyncState
++{
++    Entity *player;
++    int active;
++    int has_target;
++    int ascent_recovery;
++    int ascent_swoop_seen;
++    F32 previous_target_frame;
++    F32 peak_ascent_angle_degrees;
++    U32 segment_id;
++    WebSwingAssistPhase physical_phase;
++    U32 core_restart_count;
++    U32 backwards_target_steps;
++} WebSwingClientAnimationSyncState;
++
++// The controller's velocity angle is not one-to-one over a complete arc:
++// DESCEND moves from near zero toward the negative extreme, BOTTOM returns to
++// zero, and ASCEND rises to a positive peak before falling back toward zero.
++// Keeping separate authored curves for those physical legs makes the target
++// advance through the clip instead of pinning at the first angular maximum.
++static const WebSwingAngleFramePoint s_web_swing_descend_frame_curve[] =
++{
++    { -55.0f, 49.0f },
++    { -45.0f, 46.0f },
++    { -35.0f, 42.5f },
++    { -25.0f, 39.0f },
++};
++
++static const WebSwingAngleFramePoint s_web_swing_bottom_frame_curve[] =
++{
++    { -55.0f, 49.0f },
++    { -35.0f, 50.0f },
++    { -15.0f, 51.0f },
++    {  -6.0f, 52.0f },
++    {   0.0f, 53.0f },
++};
++
++static const WebSwingAngleFramePoint s_web_swing_early_ascent_frame_curve[] =
++{
++    {   0.0f, 53.0f },
++    {  10.0f, 54.0f },
++    {  20.0f, 55.5f },
++    {  35.0f, 57.0f },
++    {  50.0f, 59.5f },
++    {  60.0f, 61.0f },
++};
++
++// The opening chained swing is deliberately lower-energy than later cycles.
++// Velocity angle alone therefore under-drives C49 even after the fixed web has
++// visibly crossed under the anchor and into the trailing '\\' half of the arc.
++// Use the actual tether angle as a second progress signal for cycle 2 only so
++// the body reaches the authored forward/supine peak before the first release.
++static const WebSwingAngleFramePoint s_web_swing_opening_tether_ascent_curve[] =
++{
++    {   0.0f, 53.0f },
++    {  15.0f, 54.5f },
++    {  30.0f, 56.5f },
++    {  45.0f, 59.0f },
++    {  55.0f, 60.5f },
++};
++
++static WebSwingClientAnimationSyncState s_web_swing_animation_sync;
++
++static F32 entClientWebSwingFrameFromCurve(
++    const WebSwingAngleFramePoint *curve, int curve_count, F32 angle_degrees)
++{
++    int i;
++
++    if (angle_degrees <= curve[0].angle_degrees)
++        return curve[0].source_frame;
++
++    for (i = 1; i < curve_count; ++i)
++    {
++        const WebSwingAngleFramePoint *left = &curve[i - 1];
++        const WebSwingAngleFramePoint *right = &curve[i];
++        if (angle_degrees <= right->angle_degrees)
++        {
++            F32 fraction = (angle_degrees - left->angle_degrees) /
++                           (right->angle_degrees - left->angle_degrees);
++            return left->source_frame +
++                   (right->source_frame - left->source_frame) * fraction;
++        }
++    }
++
++    return curve[curve_count - 1].source_frame;
++}
++
++static F32 entClientWebSwingFrameForPhysicalState(
++    const MotionState *motion, F32 angle_degrees)
++{
++    WebSwingAssistPhase phase = motion ?
++        (WebSwingAssistPhase)motion->web_swing_assist_phase :
++        WEB_SWING_ASSIST_NONE;
++
++    switch (phase)
++    {
++        case WEB_SWING_ASSIST_DESCEND:
++            return entClientWebSwingFrameFromCurve(
++                s_web_swing_descend_frame_curve,
++                ARRAY_SIZE(s_web_swing_descend_frame_curve), angle_degrees);
++
++        case WEB_SWING_ASSIST_BOTTOM:
++            return entClientWebSwingFrameFromCurve(
++                s_web_swing_bottom_frame_curve,
++                ARRAY_SIZE(s_web_swing_bottom_frame_curve), angle_degrees);
++
++        case WEB_SWING_ASSIST_ASCEND:
++            if (!s_web_swing_animation_sync.ascent_recovery)
++            {
++                return entClientWebSwingFrameFromCurve(
++                    s_web_swing_early_ascent_frame_curve,
++                    ARRAY_SIZE(s_web_swing_early_ascent_frame_curve),
++                    angle_degrees);
++            }
++            else
++            {
++                // Once the velocity angle has peaked, the same angle values
++                // occur again while the character is still climbing. Use the
++                // falling side of that measured peak to finish the authored
++                // recovery rather than freezing on the peak pose.
++                F32 peak = MAX(s_web_swing_animation_sync.peak_ascent_angle_degrees,
++                               1.0f);
++                F32 recovery = MINMAX((peak - MAX(angle_degrees, 0.0f)) / peak,
++                                      0.0f, 1.0f);
++                return 59.0f + 3.0f * recovery;
++            }
++
++        case WEB_SWING_ASSIST_APEX:
++            return 62.0f;
++
++        default:
++            return 6.0f;
++    }
++}
++
++static int entClientWebSwingCoreSyncEligible(Entity *e, const Animation *animation)
++{
++    const char *move_name = animation && animation->move ?
++        animation->move->name : NULL;
++    int finalized_mode;
++    int is_live_phase_move = move_name && (
++        !stricmp(move_name, "WEBSWING_FULL_ATTACHED_START") ||
++        !stricmp(move_name, "WEBSWING_FULL_ATTACHED_HOLD") ||
++        !stricmp(move_name, "WEBSWING_FULL_DESCEND_START") ||
++        !stricmp(move_name, "WEBSWING_FULL_DESCEND_HOLD") ||
++        !stricmp(move_name, "WEBSWING_FULL_BOTTOM_START") ||
++        !stricmp(move_name, "WEBSWING_FULL_BOTTOM_HOLD") ||
++        !stricmp(move_name, "WEBSWING_FULL_ASCEND_START") ||
++        !stricmp(move_name, "WEBSWING_FULL_ASCEND_HOLD") ||
++        !stricmp(move_name, "WEBSWING_FULL_ATTACHED_ALT") ||
++        !stricmp(move_name, "WEBSWING_FULL_DESCEND_ALT") ||
++        !stricmp(move_name, "WEBSWING_FULL_BOTTOM_ALT") ||
++        !stricmp(move_name, "WEBSWING_FULL_ASCEND_ALT"));
++
++    if (!e || !e->motion || !e->seq || e != controlledPlayerPtr())
++        return 0;
++
++    // WebSwingDev keeps its explicit 0..3 animation selector for authoring.
++    // Normal gameplay always uses the finalized mode-3 presentation while the
++    // Web Swing input is enabled, so physics-driven frame sync no longer
++    // depends on a development-only command-line flag.
++    finalized_mode = global_state.webswing_dev ?
++        g_cohsourcedev_webswing_anim_selection == 3 :
++        e->motion->input.web_swing_enabled != 0;
++
++    return finalized_mode &&
++        e->motion->input.web_swing_enabled &&
++        e->motion->web_swing_attached &&
++        e->motion->web_swing_active_backend &&
++        move_name && (!stricmp(move_name, "WEBSWING_FULL_CORE") ||
++                      is_live_phase_move) &&
++        animation->typeGfx && animation->typeGfx->animP &&
++        animation->typeGfx->animP[0];
++}
++
++static const char *entClientWebSwingPhysicalPhaseName(const MotionState *motion)
++{
++    if (!motion)
++        return "NONE";
++
++    switch ((WebSwingAssistPhase)motion->web_swing_assist_phase)
++    {
++        case WEB_SWING_ASSIST_DESCEND: return "DESCEND";
++        case WEB_SWING_ASSIST_BOTTOM:  return "BOTTOM";
++        case WEB_SWING_ASSIST_ASCEND:  return "ASCEND";
++        case WEB_SWING_ASSIST_APEX:    return "APEX";
++        case WEB_SWING_ASSIST_LAUNCH:  return "LAUNCH";
++        default:                       return "NONE";
++    }
++}
++
++static void entClientPublishWebSwingAnimationTelemetry(const Entity *e,
++                                                       const Animation *animation,
++                                                       int sync_active,
++                                                       F32 target_frame,
++                                                       F32 physical_angle_degrees,
++                                                       F32 physical_plane_speed,
++                                                       F32 physical_horizontal_speed)
++{
++    WebSwingAnimationSyncTelemetry telemetry;
++    F32 frame_span = 0.0f;
++
++    memset(&telemetry, 0, sizeof(telemetry));
++    telemetry.sync_active = sync_active;
++    if (sync_active && e && e->motion)
++    {
++        telemetry.physical_tick = e->motion->tickCounter;
++        strcpy_s(telemetry.physical_phase, sizeof(telemetry.physical_phase),
++                 entClientWebSwingPhysicalPhaseName(e->motion));
++        telemetry.physical_angle_degrees = physical_angle_degrees;
++        telemetry.physical_plane_speed = physical_plane_speed;
++        telemetry.physical_horizontal_speed = physical_horizontal_speed;
++    }
++    telemetry.target_frame = target_frame;
++    telemetry.core_restart_count = s_web_swing_animation_sync.core_restart_count;
++    telemetry.backwards_target_steps =
++        s_web_swing_animation_sync.backwards_target_steps;
++
++    if (animation && animation->move && animation->move->name)
++        strcpy_s(telemetry.move_name, sizeof(telemetry.move_name),
++                 animation->move->name);
++    if (animation && animation->typeGfx && animation->typeGfx->animP &&
++        animation->typeGfx->animP[0])
++    {
++        telemetry.frame = animation->frame;
++        telemetry.first_frame = animation->typeGfx->animP[0]->firstFrame;
++        telemetry.last_frame = animation->typeGfx->animP[0]->lastFrame;
++        frame_span = telemetry.last_frame - telemetry.first_frame;
++        if (frame_span > 0.0f)
++        {
++            telemetry.normalized_progress = MINMAX(
++                (telemetry.frame - telemetry.first_frame) / frame_span,
++                0.0f, 1.0f);
++            telemetry.target_normalized_progress = MINMAX(
++                (target_frame - telemetry.first_frame) / frame_span,
++                0.0f, 1.0f);
++        }
++    }
++    telemetry.sync_error_frames = telemetry.frame - telemetry.target_frame;
++#ifndef TEST_CLIENT
++    pmotionWebSwingCaptureSetAnimationSyncTelemetry(&telemetry);
++#endif
++}
++
++// runSequencerMoveUpdate has already selected the move and advanced seqStep.
++// This client-only correction is therefore the final animation clock before
++// downstream pose evaluation. It reads physical velocity but mutates only the
++// authored frame cursor.
++static void entClientDriveWebSwingAnimationFrame(Entity *e, int is_new_move)
++{
++    Animation *animation;
++    WebSwingAssistPhase physical_phase;
++    F32 horizontal_speed;
++    F32 swing_angle_degrees;
++    F32 target_frame;
++    F32 tether_target_frame = 0.0f;
++    F32 first_frame;
++    F32 last_frame;
++    F32 error;
++    F32 authored_rate;
++    F32 max_correction;
++    int continuing;
++    int new_segment;
++    int new_physical_phase;
++
++    if (!e || e != controlledPlayerPtr())
++        return;
++
++    animation = e->seq ? &e->seq->animation : NULL;
++    if (s_web_swing_animation_sync.player != e)
++    {
++        memset(&s_web_swing_animation_sync, 0,
++               sizeof(s_web_swing_animation_sync));
++        s_web_swing_animation_sync.player = e;
++    }
++
++    if (!entClientWebSwingCoreSyncEligible(e, animation))
++    {
++        s_web_swing_animation_sync.active = 0;
++        s_web_swing_animation_sync.has_target = 0;
++        entClientPublishWebSwingAnimationTelemetry(e, animation, 0, 0.0f,
++                                                   0.0f, 0.0f, 0.0f);
++        return;
++    }
++
++    first_frame = animation->typeGfx->animP[0]->firstFrame;
++    last_frame = animation->typeGfx->animP[0]->lastFrame;
++    if (last_frame < first_frame)
++    {
++        s_web_swing_animation_sync.active = 0;
++        s_web_swing_animation_sync.has_target = 0;
++        entClientPublishWebSwingAnimationTelemetry(e, animation, 0, 0.0f,
++                                                   0.0f, 0.0f, 0.0f);
++        return;
++    }
++
++    horizontal_speed = sqrt(SQR(e->motion->vel[0]) + SQR(e->motion->vel[2]));
++    swing_angle_degrees = DEG(atan2(e->motion->vel[1],
++        MAX(horizontal_speed, 0.0001f)));
++    physical_phase = (WebSwingAssistPhase)e->motion->web_swing_assist_phase;
++    continuing = s_web_swing_animation_sync.active &&
++                 s_web_swing_animation_sync.has_target;
++    new_segment = !continuing ||
++        s_web_swing_animation_sync.segment_id !=
++            e->motion->web_swing_anim_segment_id;
++    new_physical_phase = new_segment ||
++        s_web_swing_animation_sync.physical_phase != physical_phase;
++
++    if (new_segment)
++    {
++        s_web_swing_animation_sync.ascent_recovery = 0;
++        s_web_swing_animation_sync.ascent_swoop_seen = 0;
++        s_web_swing_animation_sync.peak_ascent_angle_degrees = 0.0f;
++    }
++
++    if (physical_phase == WEB_SWING_ASSIST_ASCEND)
++    {
++        if (new_physical_phase)
++        {
++            s_web_swing_animation_sync.ascent_recovery = 0;
++            s_web_swing_animation_sync.ascent_swoop_seen = 0;
++            s_web_swing_animation_sync.peak_ascent_angle_degrees =
++                MAX(swing_angle_degrees, 0.0f);
++        }
++        s_web_swing_animation_sync.peak_ascent_angle_degrees = MAX(
++            s_web_swing_animation_sync.peak_ascent_angle_degrees,
++            swing_angle_degrees);
++        if (e->motion->web_swing_assist_swoop_active)
++            s_web_swing_animation_sync.ascent_swoop_seen = 1;
++        if ((s_web_swing_animation_sync.ascent_swoop_seen &&
++             !e->motion->web_swing_assist_swoop_active) ||
++            (s_web_swing_animation_sync.peak_ascent_angle_degrees >= 12.0f &&
++             swing_angle_degrees <=
++                s_web_swing_animation_sync.peak_ascent_angle_degrees - 2.0f))
++            s_web_swing_animation_sync.ascent_recovery = 1;
++    }
++
++    target_frame = MINMAX(entClientWebSwingFrameForPhysicalState(
++                              e->motion, swing_angle_degrees),
++                          first_frame, last_frame);
++
++    if (physical_phase == WEB_SWING_ASSIST_ASCEND &&
++        e->motion->web_swing_assist_cycle_id == 2 && horizontal_speed > 0.05f)
++    {
++        Vec3 tether_to_anchor;
++        F32 anchor_forward_lead;
++        F32 anchor_vertical;
++        F32 tether_trailing_angle_degrees = 0.0f;
++
++        subVec3(e->motion->web_swing_anchor, ENTPOS(e), tether_to_anchor);
++        anchor_forward_lead =
++            (tether_to_anchor[0] * e->motion->vel[0] +
++             tether_to_anchor[2] * e->motion->vel[2]) / horizontal_speed;
++        anchor_vertical = tether_to_anchor[1];
++        if (anchor_forward_lead < 0.0f && anchor_vertical > 1.0f)
++        {
++            tether_trailing_angle_degrees = DEG(
++                atan2(-anchor_forward_lead, anchor_vertical));
++            tether_target_frame = entClientWebSwingFrameFromCurve(
++                s_web_swing_opening_tether_ascent_curve,
++                ARRAY_SIZE(s_web_swing_opening_tether_ascent_curve),
++                tether_trailing_angle_degrees);
++            target_frame = MAX(target_frame,
++                MINMAX(tether_target_frame, first_frame, last_frame));
++        }
++    }
++
++    if (continuing && is_new_move)
++    {
++        ++s_web_swing_animation_sync.core_restart_count;
++        filelog_printf("webswing.log",
++                       "WEB_SWING CLIENT anim_core_restart count=%u angle_deg=%.3f frame=%.3f target=%.3f\n",
++                       s_web_swing_animation_sync.core_restart_count,
++                       swing_angle_degrees, animation->frame, target_frame);
++    }
++
++    // Special moves reset this state before the core can re-enter. The
++    // phase-aware curves are forward by construction, so this guard is now
++    // only small-noise protection rather than a way to conceal a reversed
++    // angle mapping.
++    if (continuing && !new_segment &&
++        target_frame < s_web_swing_animation_sync.previous_target_frame)
++    {
++        ++s_web_swing_animation_sync.backwards_target_steps;
++        target_frame = s_web_swing_animation_sync.previous_target_frame;
++    }
++
++    if (!continuing)
++    {
++        animation->frame = target_frame;
++        filelog_printf("webswing.log",
++                       "WEB_SWING CLIENT anim_sync_begin move=%s angle_deg=%.3f frame=%.3f first=%.1f last=%.1f\n",
++                       animation->move && animation->move->name ? animation->move->name : "NONE",
++                       swing_angle_degrees, target_frame,
++                       first_frame, last_frame);
++    }
++    else
++    {
++        error = target_frame - animation->frame;
++        // Angle chooses the destination, but never skip across the authored
++        // performance to get there. TIMESTEP is expressed in 30 Hz ticks, so
++        // this caps visible traversal at the source clip's native rate around
++        // the lower arc and at 75% of native rate elsewhere. The previous
++        // implementation allowed six-frame corrections in one render update,
++        // which compressed the best body mechanics into an unreadable burst.
++        // C51 intentionally makes ASCEND readable rather than trying to chase
++        // the physical target in a burst.  The attached controller now provides
++        // a much longer 18/24-tick upswing window, so traverse the authored
++        // frames at less than half native speed and let the viewer see the
++        // shoulders, torso and hips move through the pose.
++        authored_rate = physical_phase == WEB_SWING_ASSIST_ASCEND ? 0.45f :
++                        (physical_phase == WEB_SWING_ASSIST_BOTTOM ||
++                         fabs(swing_angle_degrees) <= 15.0f ? 1.0f : 0.75f);
++        max_correction = MINMAX(authored_rate * TIMESTEP, 0.1f,
++                                physical_phase == WEB_SWING_ASSIST_ASCEND ?
++                                1.0f : 2.0f);
++        animation->frame += MINMAX(error, -max_correction, max_correction);
++        animation->frame = MINMAX(animation->frame, first_frame, last_frame);
++    }
++
++    s_web_swing_animation_sync.active = 1;
++    s_web_swing_animation_sync.has_target = 1;
++    s_web_swing_animation_sync.previous_target_frame = target_frame;
++    s_web_swing_animation_sync.segment_id =
++        e->motion->web_swing_anim_segment_id;
++    s_web_swing_animation_sync.physical_phase = physical_phase;
++    entClientPublishWebSwingAnimationTelemetry(
++        e, animation, 1, target_frame, swing_angle_degrees,
++        sqrt(SQR(horizontal_speed) + SQR(e->motion->vel[1])),
++        horizontal_speed);
++}
++
+ static void entClientUpdate(Entity *e)
+ {
+     SeqInst * seq = e->seq;
+@@ -2895,6 +3353,7 @@ PERFINFO_AUTO_STOP_START("Sequencer",1);
+ 
+     needCostumeApply = 0;
+     isNewMove = runSequencerMoveUpdate( e, &needCostumeApply ) != NULL ? 1 : 0;
++    entClientDriveWebSwingAnimationFrame(e, isNewMove);
+     seq->updated_appearance |= isNewMove;  
+ 
+     /////////// Reset Graphics, and manage fx as needed
+@@ -3202,6 +3661,1292 @@ void entClientProcessVisibility()
+     PERFINFO_AUTO_STOP();
+ }
+ 
++#ifndef TEST_CLIENT
++typedef enum WebSwingVisualStyle
++{
++    WEB_SWING_VISUAL_STYLE_LEGACY = 0,
++    WEB_SWING_VISUAL_STYLE_WEB,
++    WEB_SWING_VISUAL_STYLE_TECH,
++    WEB_SWING_VISUAL_STYLE_MAGIC,
++} WebSwingVisualStyle;
++
++typedef struct WebSwingTetherBasis
++{
++    Vec3 direction;
++    Vec3 u;
++    Vec3 v;
++} WebSwingTetherBasis;
++
++// Keep the prototype palette together so each fantasy can be tuned without
++// scattering unexplained ARGB values through the draw routines.
++static const U32 s_webSwingLegacyOuterColor = 0xffd0a060;
++static const U32 s_webSwingLegacyCoreColor = 0xffffffff;
++static const U32 s_webSwingLegacyLeaderOuterColor = 0xffe8c080;
++
++static const U32 s_webSwingWebOuterColor = 0xa8b9d1da;
++static const U32 s_webSwingWebCoreColor = 0xfff9fcff;
++static const U32 s_webSwingWebFilamentColorA = 0xffdfe9ef;
++static const U32 s_webSwingWebFilamentColorB = 0xffc4d6e0;
++static const U32 s_webSwingWebLeaderColor = 0xffeaf5fb;
++
++static const U32 s_webSwingTechOuterColor = 0x7828c7e8;
++static const U32 s_webSwingTechCoreColor = 0xff5de6ff;
++static const U32 s_webSwingTechFilamentColor = 0xff8aefff;
++static const U32 s_webSwingTechAnchorColor = 0xff50d8f5;
++static const U32 s_webSwingTechInnerColor = 0xff83efff;
++static const U32 s_webSwingTechLeaderColor = 0xff8fefff;
++
++static const U32 s_webSwingMagicOuterColor = 0x995331c6;
++static const U32 s_webSwingMagicCoreColor = 0xffe5ddff;
++static const U32 s_webSwingMagicFilamentColorA = 0xffb28eff;
++static const U32 s_webSwingMagicFilamentColorB = 0xff8264d8;
++static const U32 s_webSwingMagicAnchorColor = 0xff8a6be8;
++static const U32 s_webSwingMagicLeaderColor = 0xffdcd2ff;
++
++#define WEBSWING_WEB_SEGMENTS 15
++#define WEBSWING_TECH_SEGMENTS 8
++#define WEBSWING_MAGIC_SEGMENTS 12
++
++// Native, lore-friendly endpoint experiments.  These are purely client-side
++// visuals managed at the already-set physics anchor; they never participate in
++// tether placement or motion.  Keep the procedural rings underneath them as a
++// fallback while we audition the shipped art in gameplay.
++static FxHandle s_webSwingNativeAnchorFx = 0;
++static GfxNode *s_webSwingTechAnchorNode = NULL;
++static Model *s_webSwingTechAnchorModel = NULL;
++static WebSwingVisualStyle s_webSwingNativeAnchorLoggedStyle = WEB_SWING_VISUAL_STYLE_LEGACY;
++static WebSwingVisualStyle s_webSwingNativeAnchorDumpedStyle = WEB_SWING_VISUAL_STYLE_LEGACY;
++
++#define WEBSWING_MAGIC_NATIVE_PART_COUNT 2
++static const char *s_webSwingMagicNativePartNames[WEBSWING_MAGIC_NATIVE_PART_COUNT] =
++{
++    "CUSTOMIZABLEPOWERS_POOLS/SORCERY/Circle_Runes.part",
++    "CUSTOMIZABLEPOWERS_POOLS/SORCERY/Circle_Runes_Blur.part",
++};
++static ParticleSystem *s_webSwingMagicNativeParts[WEBSWING_MAGIC_NATIVE_PART_COUNT];
++static int s_webSwingMagicNativePartIds[WEBSWING_MAGIC_NATIVE_PART_COUNT];
++static int s_webSwingMagicNativePartsLogged;
++static Entity *s_webSwingMagicVisualAnchorPlayer;
++static U32 s_webSwingMagicVisualAnchorCycle = ~0u;
++static Vec3 s_webSwingMagicVisualAnchorPhysical;
++static Vec3 s_webSwingMagicVisualAnchor;
++static int s_webSwingMagicVisualAnchorValid;
++
++static void entClientWebSwingResetMagicVisualAnchor(void)
++{
++    s_webSwingMagicVisualAnchorPlayer = NULL;
++    s_webSwingMagicVisualAnchorCycle = ~0u;
++    zeroVec3(s_webSwingMagicVisualAnchorPhysical);
++    zeroVec3(s_webSwingMagicVisualAnchor);
++    s_webSwingMagicVisualAnchorValid = 0;
++}
++
++static void entClientWebSwingResolveMagicVisualAnchor(Entity *e,
++                                                      const Vec3 physics_anchor,
++                                                      const Vec3 tether_start,
++                                                      F32 default_visual_distance,
++                                                      Vec3 visual_anchor)
++{
++    F32 visual_distance = default_visual_distance;
++    Vec3 toward_anchor;
++    Vec3 delta;
++    F32 physics_distance;
++    int needs_refresh;
++
++    if (global_state.webswing_dev &&
++        g_cohsourcedev_webswing_anchor_preview_offset > 0.0f)
++    {
++        visual_distance = g_cohsourcedev_webswing_anchor_preview_offset;
++    }
++
++    needs_refresh = !s_webSwingMagicVisualAnchorValid ||
++                    s_webSwingMagicVisualAnchorPlayer != e ||
++                    s_webSwingMagicVisualAnchorCycle != e->motion->web_swing_assist_cycle_id ||
++                    distance3Squared(s_webSwingMagicVisualAnchorPhysical,
++                                     physics_anchor) > 1.0f;
++
++    if (needs_refresh)
++    {
++        copyVec3(physics_anchor, s_webSwingMagicVisualAnchorPhysical);
++        copyVec3(physics_anchor, s_webSwingMagicVisualAnchor);
++
++        subVec3(physics_anchor, tether_start, toward_anchor);
++        physics_distance = normalVec3(toward_anchor);
++        if (physics_distance > 0.001f)
++        {
++            visual_distance = MIN(visual_distance, physics_distance);
++            scaleVec3(toward_anchor, visual_distance, delta);
++            addVec3(tether_start, delta, s_webSwingMagicVisualAnchor);
++        }
++
++        s_webSwingMagicVisualAnchorPlayer = e;
++        s_webSwingMagicVisualAnchorCycle = e->motion->web_swing_assist_cycle_id;
++        s_webSwingMagicVisualAnchorValid = 1;
++        filelog_printf("webswing.log",
++                       "WEB_SWING CLIENT magic_visual_anchor cycle_id=%u physics=(%.3f,%.3f,%.3f) visual=(%.3f,%.3f,%.3f) visual_distance=%.3f\n",
++                       e->motion->web_swing_assist_cycle_id,
++                       physics_anchor[0], physics_anchor[1], physics_anchor[2],
++                       s_webSwingMagicVisualAnchor[0], s_webSwingMagicVisualAnchor[1],
++                       s_webSwingMagicVisualAnchor[2], visual_distance);
++    }
++
++    copyVec3(s_webSwingMagicVisualAnchor, visual_anchor);
++}
++
++static void entClientWebSwingResolveNativeAnchorVisualPosition(const Vec3 anchor,
++                                                               const Vec3 tether_start,
++                                                               Vec3 visual_anchor)
++{
++    copyVec3(anchor, visual_anchor);
++    if (global_state.webswing_dev &&
++        g_cohsourcedev_webswing_anchor_preview_offset > 0.0f)
++    {
++        Vec3 toward_anchor;
++        Vec3 preview_delta;
++        F32 anchor_distance;
++        F32 preview_distance;
++
++        subVec3(anchor, tether_start, toward_anchor);
++        anchor_distance = normalVec3(toward_anchor);
++        if (anchor_distance > 0.001f)
++        {
++            preview_distance = MIN(g_cohsourcedev_webswing_anchor_preview_offset,
++                                   anchor_distance);
++            scaleVec3(toward_anchor, preview_distance, preview_delta);
++            addVec3(tether_start, preview_delta, visual_anchor);
++        }
++    }
++}
++
++static void entClientWebSwingStopMagicNativeParts(void)
++{
++    int i;
++    for (i = 0; i < WEBSWING_MAGIC_NATIVE_PART_COUNT; ++i)
++    {
++        if (partConfirmValid(s_webSwingMagicNativeParts[i],
++                             s_webSwingMagicNativePartIds[i]))
++        {
++            partSoftKillSystem(s_webSwingMagicNativeParts[i],
++                               s_webSwingMagicNativePartIds[i]);
++        }
++        s_webSwingMagicNativeParts[i] = NULL;
++        s_webSwingMagicNativePartIds[i] = 0;
++    }
++    s_webSwingMagicNativePartsLogged = 0;
++}
++
++static int entClientWebSwingManageMagicNativeParts(const Vec3 anchor,
++                                                   const Vec3 tether_start,
++                                                   F32 anchor_fraction)
++{
++    F32 rune_layout_scale = 1.0f;
++    F32 rune_particle_scale = 0.50f;
++    Mat4 mat;
++    Vec3 visual_anchor;
++    Vec3 rune_normal;
++    Vec3 camera_delta;
++    F32 camera_distance;
++    F32 camera_visibility;
++    U8 inherited_alpha;
++    int i;
++    int alive = 0;
++
++    if (anchor_fraction < 0.35f || !validateVec3(anchor))
++        return 0;
++
++    copyVec3(anchor, visual_anchor);
++
++    // Lore anchors live at the *real* pendulum endpoint.  Never drag them down
++    // the rope toward the player just to keep them on camera: that caused both
++    // rune and drone to sweep through the foreground as the camera/player moved
++    // around the fixed near-field object.  Instead, scale modestly with viewing
++    // distance and fade away if the camera ever gets unusually close.
++    subVec3(visual_anchor, cam_info.cammat[3], camera_delta);
++    camera_distance = lengthVec3(camera_delta);
++    if (camera_distance < 18.0f)
++    {
++        entClientWebSwingStopMagicNativeParts();
++        return 0;
++    }
++    camera_visibility = MINMAX((camera_distance - 18.0f) / 18.0f, 0.0f, 1.0f);
++    rune_particle_scale = MINMAX(0.50f + camera_distance * 0.0045f, 0.50f, 1.20f);
++
++    // Treat the magical anchor as a summoned ceiling plate, not a billboard
++    // attached to the rope.  Tether-facing orientation made the rune rotate
++    // into the camera whenever the web direction approached the view axis,
++    // producing a giant full-screen flash.  Keep the rune horizontal in world
++    // space for the entire swing; the tether may move around it, but the plate
++    // itself remains stable.
++    copyMat4(unitmat, mat);
++    pitchMat3(RAD(180.0f), mat);
++    scaleMat3(mat, mat, rune_layout_scale);
++    copyVec3(visual_anchor, mat[3]);
++    copyVec3(mat[1], rune_normal);
++    normalVec3(rune_normal);
++    inherited_alpha = (U8)MINMAX(anchor_fraction * camera_visibility * 255.0f,
++                                 0.0f, 255.0f);
++
++    for (i = 0; i < WEBSWING_MAGIC_NATIVE_PART_COUNT; ++i)
++    {
++        ParticleSystem *system = partConfirmValid(s_webSwingMagicNativeParts[i],
++                                                  s_webSwingMagicNativePartIds[i]);
++        if (!system)
++        {
++            int id = 0;
++            system = partCreateSystem((char *)s_webSwingMagicNativePartNames[i],
++                                      &id, PARTICLE_KICKSTART, 10,
++                                      FX_WORLDFX, 1.0f);
++            s_webSwingMagicNativeParts[i] = system;
++            s_webSwingMagicNativePartIds[i] = id;
++            if (system)
++            {
++                // Particle quads are sized independently from the parent
++                // transform.  A mild size bump keeps the glyphs readable at
++                // gameplay distance without recreating the giant proof pass.
++                system->startsize *= rune_particle_scale;
++                system->endsize *= rune_particle_scale;
++
++                // The stock Rune of Protection is staged as a power effect and
++                // therefore lets these layers populate gradually.  A traversal
++                // anchor needs to be readable the instant the tether connects,
++                // so guarantee one initial glyph/plate particle and modestly
++                // raise the sustain rate without changing the shipped textures.
++                system->burst = MAX(system->burst, 1);
++                system->new_per_frame = MAX(system->new_per_frame, 0.14f);
++            }
++        }
++        if (system && partConfirmValid(system, s_webSwingMagicNativePartIds[i]))
++        {
++            partSetOriginMat(system, s_webSwingMagicNativePartIds[i], mat);
++            partSetInheritedAlpha(system, s_webSwingMagicNativePartIds[i],
++                                  inherited_alpha);
++            ++alive;
++        }
++    }
++
++    if (!s_webSwingMagicNativePartsLogged)
++    {
++        filelog_printf("webswing.log",
++                       "WEB_SWING CLIENT magic_native_parts alive=%d visual_anchor=(%.3f,%.3f,%.3f) preview_from_player=%.3f fraction=%.3f layout_scale=%.2f particle_scale=%.2f rune_normal=(%.3f,%.3f,%.3f)\n",
++                       alive, visual_anchor[0], visual_anchor[1], visual_anchor[2],
++                       g_cohsourcedev_webswing_anchor_preview_offset,
++                       anchor_fraction, rune_layout_scale, rune_particle_scale,
++                       rune_normal[0], rune_normal[1], rune_normal[2]);
++        for (i = 0; i < WEBSWING_MAGIC_NATIVE_PART_COUNT; ++i)
++        {
++            ParticleSystem *system = partConfirmValid(s_webSwingMagicNativeParts[i],
++                                                      s_webSwingMagicNativePartIds[i]);
++            if (system && system->sysInfo)
++            {
++                filelog_printf("webswing.log",
++                               "WEB_SWING CLIENT magic_native_part i=%d name=%s id=%d start=%.3f end=%.3f burst=%d new_per_frame=%.3f emission_life=%.3f fade_out_by=%.3f facing=%d posmode=%d tex0=%s tex1=%s\n",
++                               i, s_webSwingMagicNativePartNames[i],
++                               s_webSwingMagicNativePartIds[i],
++                               system->startsize, system->endsize, system->burst,
++                               system->new_per_frame, system->emission_life_span,
++                               system->sysInfo->fade_out_by,
++                               system->sysInfo->frontorlocalfacing,
++                               system->sysInfo->worldorlocalposition,
++                               system->sysInfo->parttex[0].texturename,
++                               system->sysInfo->parttex[1].texturename);
++            }
++        }
++        s_webSwingMagicNativePartsLogged = 1;
++    }
++
++    return alive > 0;
++}
++
++static int entClientWebSwingManageTechAnchorModel(const Vec3 anchor,
++                                                  F32 anchor_fraction)
++{
++    F32 drone_scale;
++    Vec3 camera_delta;
++    F32 camera_distance;
++    F32 camera_visibility;
++    char *model_path = NULL;
++
++    if (anchor_fraction < 0.35f || !validateVec3(anchor))
++        return 0;
++
++    subVec3(anchor, cam_info.cammat[3], camera_delta);
++    camera_distance = lengthVec3(camera_delta);
++    if (camera_distance < 18.0f)
++    {
++        if (s_webSwingTechAnchorNode)
++            gfxNodeSetAlpha(s_webSwingTechAnchorNode, 0, 1);
++        return 0;
++    }
++    camera_visibility = MINMAX((camera_distance - 18.0f) / 18.0f, 0.0f, 1.0f);
++    drone_scale = MINMAX(3.5f + camera_distance * 0.025f, 3.5f, 8.0f);
++
++    if (!s_webSwingTechAnchorModel)
++    {
++        model_path = objectLibraryPathFromObj("FX_Drone");
++        if (model_path)
++        {
++            s_webSwingTechAnchorModel = modelFind(
++                "FX_Drone", model_path, LOAD_NOW,
++                GEO_INIT_FOR_DRAWING | GEO_USED_BY_GFXTREE);
++        }
++        filelog_printf("webswing.log",
++                       "WEB_SWING CLIENT tech_anchor_model_load path=%s model=%p\n",
++                       model_path ? model_path : "<null>",
++                       s_webSwingTechAnchorModel);
++    }
++
++    if (!s_webSwingTechAnchorModel)
++        return 0;
++
++    if (!s_webSwingTechAnchorNode)
++    {
++        s_webSwingTechAnchorNode = gfxTreeInsert(NULL);
++        if (!s_webSwingTechAnchorNode)
++            return 0;
++        s_webSwingTechAnchorNode->model = s_webSwingTechAnchorModel;
++        if (s_webSwingTechAnchorModel->trick)
++        {
++            gfxTreeInitGfxNodeWithObjectsTricks(
++                s_webSwingTechAnchorNode, s_webSwingTechAnchorModel->trick);
++            s_webSwingTechAnchorNode->trick_from_where = TRICKFROM_MODEL;
++        }
++        filelog_printf("webswing.log",
++                       "WEB_SWING CLIENT tech_anchor_node_create node=%p model=%s radius=%.3f scale=%.2f\n",
++                       s_webSwingTechAnchorNode,
++                       s_webSwingTechAnchorModel->name ? s_webSwingTechAnchorModel->name : "<null>",
++                       s_webSwingTechAnchorModel->radius, drone_scale);
++    }
++
++    copyMat4(unitmat, s_webSwingTechAnchorNode->mat);
++    // Give the deployed anchor a restrained hover-device motion without ever
++    // steering it toward the camera or tether.  A fixed world-space yaw keeps
++    // it readable and avoids the same view-axis flashing failure the rune had.
++    yawMat3((F32)global_state.global_frame_count * 0.012f,
++            s_webSwingTechAnchorNode->mat);
++    scaleMat3(s_webSwingTechAnchorNode->mat, s_webSwingTechAnchorNode->mat,
++              drone_scale);
++    copyVec3(anchor, s_webSwingTechAnchorNode->mat[3]);
++    gfxNodeSetAlpha(s_webSwingTechAnchorNode,
++                    (U8)MINMAX(anchor_fraction * camera_visibility * 255.0f,
++                               0.0f, 255.0f), 1);
++    return 1;
++}
++
++static void entClientWebSwingDumpNativeAnchorFxInfo(WebSwingVisualStyle style,
++                                                    const char *fxname)
++{
++    FxInfo *info;
++    int condition_index;
++
++    if (!global_state.webswing_dev || !fxname ||
++        s_webSwingNativeAnchorDumpedStyle == style)
++        return;
++
++    info = fxGetFxInfo(fxname);
++    if (!info)
++    {
++        filelog_printf("webswing.log",
++                       "WEB_SWING CLIENT native_anchor_graph style=%d fx=%s info=NULL\n",
++                       (int)style, fxname);
++        s_webSwingNativeAnchorDumpedStyle = style;
++        return;
++    }
++
++    filelog_printf("webswing.log",
++                   "WEB_SWING CLIENT native_anchor_graph_begin style=%d fx=%s lifespan=%d inputs=%d conditions=%d animScale=%.3f clampMin=(%.3f,%.3f,%.3f) clampMax=(%.3f,%.3f,%.3f)\n",
++                   (int)style, fxname, info->lifespan, info->inputsRealCount,
++                   eaSize(&info->conditions), info->animScale,
++                   info->clampMinScale[0], info->clampMinScale[1], info->clampMinScale[2],
++                   info->clampMaxScale[0], info->clampMaxScale[1], info->clampMaxScale[2]);
++    for (condition_index = 0; condition_index < eaSize(&info->conditions); ++condition_index)
++    {
++        FxCondition *condition = info->conditions[condition_index];
++        int event_index;
++        if (!condition)
++            continue;
++        filelog_printf("webswing.log",
++                       "WEB_SWING CLIENT native_anchor_graph_condition style=%d ci=%d on=%s time=%.3f repeat=%d events=%d\n",
++                       (int)style, condition_index,
++                       condition->on ? condition->on : "<null>", condition->time,
++                       (int)condition->repeat, eaSize(&condition->events));
++        for (event_index = 0; event_index < eaSize(&condition->events); ++event_index)
++        {
++            FxEvent *event = condition->events[event_index];
++            int part_index;
++            int geom_index;
++            if (!event)
++                continue;
++            filelog_printf("webswing.log",
++                           "WEB_SWING CLIENT native_anchor_graph_event style=%d ci=%d ei=%d name=%s type=%d at=%s bhvr=%s childfx=%s anim=%s lifespan=%.3f parts=%d geoms=%d\n",
++                           (int)style, condition_index, event_index,
++                           event->name ? event->name : "<null>", (int)event->type,
++                           event->at ? event->at : "<null>",
++                           event->bhvr ? event->bhvr : "<null>",
++                           event->childfx ? event->childfx : "<null>",
++                           event->anim ? event->anim : "<null>", event->lifespan,
++                           eaSize(&event->part), eaSize(&event->geom));
++            for (part_index = 0; part_index < eaSize(&event->part); ++part_index)
++            {
++                TokenizerParams *part = event->part[part_index];
++                filelog_printf("webswing.log",
++                               "WEB_SWING CLIENT native_anchor_graph_part style=%d ci=%d ei=%d pi=%d value=%s\n",
++                               (int)style, condition_index, event_index, part_index,
++                               (part && part->params[0]) ? part->params[0] : "<null>");
++            }
++            for (geom_index = 0; geom_index < eaSize(&event->geom); ++geom_index)
++            {
++                TokenizerParams *geom = event->geom[geom_index];
++                filelog_printf("webswing.log",
++                               "WEB_SWING CLIENT native_anchor_graph_geom style=%d ci=%d ei=%d gi=%d value=%s\n",
++                               (int)style, condition_index, event_index, geom_index,
++                               (geom && geom->params[0]) ? geom->params[0] : "<null>");
++            }
++        }
++    }
++    filelog_printf("webswing.log",
++                   "WEB_SWING CLIENT native_anchor_graph_end style=%d fx=%s\n",
++                   (int)style, fxname);
++    s_webSwingNativeAnchorDumpedStyle = style;
++}
++
++static const char *entClientWebSwingNativeAnchorFxName(WebSwingVisualStyle style)
++{
++    switch (style)
++    {
++        case WEB_SWING_VISUAL_STYLE_TECH:
++            return "COHSOURCEDEV/WebSwingTechAnchor.fx";
++        case WEB_SWING_VISUAL_STYLE_MAGIC:
++            return NULL;
++        default:
++            return NULL;
++    }
++}
++
++static int entClientWebSwingManageNativeAnchorFx(WebSwingVisualStyle style,
++                                                 const Vec3 anchor,
++                                                 const Vec3 tether_start,
++                                                 F32 anchor_fraction)
++{
++    const char *fxname = entClientWebSwingNativeAnchorFxName(style);
++    Mat4 mat;
++    Vec3 visual_anchor;
++
++    // Delay the native object until the shot is close enough to connection
++    // that it reads as the endpoint materializing, not a pre-existing object.
++    if (style == WEB_SWING_VISUAL_STYLE_MAGIC)
++    {
++        if (s_webSwingNativeAnchorFx)
++            s_webSwingNativeAnchorFx = fxDelete(s_webSwingNativeAnchorFx, SOFT_KILL);
++        return entClientWebSwingManageMagicNativeParts(anchor, tether_start,
++                                                       anchor_fraction);
++    }
++
++    if (style == WEB_SWING_VISUAL_STYLE_TECH)
++    {
++        if (s_webSwingNativeAnchorFx)
++            s_webSwingNativeAnchorFx = fxDelete(s_webSwingNativeAnchorFx, SOFT_KILL);
++        entClientWebSwingStopMagicNativeParts();
++        return entClientWebSwingManageTechAnchorModel(anchor, anchor_fraction);
++    }
++
++    entClientWebSwingStopMagicNativeParts();
++
++    if (!fxname || anchor_fraction < 0.35f || !validateVec3(anchor))
++        return 0;
++
++    entClientWebSwingDumpNativeAnchorFxInfo(style, fxname);
++
++    entClientWebSwingResolveNativeAnchorVisualPosition(anchor, tether_start,
++                                                       visual_anchor);
++    copyMat4(unitmat, mat);
++    if (style == WEB_SWING_VISUAL_STYLE_TECH)
++    {
++        // FX_Drone is compact at its stock power scale.  Treat this as a
++        // deployed anchor drone, not a tiny pet accessory.
++        scaleMat3(mat, mat, 3.0f);
++    }
++    copyVec3(visual_anchor, mat[3]);
++    s_webSwingNativeAnchorFx = fxManageWorldFx(
++        s_webSwingNativeAnchorFx, (char *)fxname, mat,
++        350.0f, 350.0f, NULL, NULL);
++    if (s_webSwingNativeAnchorLoggedStyle != style)
++    {
++        Vec3 bounds_ul = {0};
++        Vec3 bounds_lr = {0};
++        if (s_webSwingNativeAnchorFx)
++            fxFetchSides(s_webSwingNativeAnchorFx, bounds_ul, bounds_lr);
++        filelog_printf("webswing.log",
++                       "WEB_SWING CLIENT native_anchor style=%d fx=%s handle=%u anchor=(%.3f,%.3f,%.3f) visual_anchor=(%.3f,%.3f,%.3f) preview_from_player=%.3f fraction=%.3f bounds_ul=(%.3f,%.3f,%.3f) bounds_lr=(%.3f,%.3f,%.3f)\n",
++                       (int)style, fxname, (unsigned int)s_webSwingNativeAnchorFx,
++                       anchor[0], anchor[1], anchor[2],
++                       visual_anchor[0], visual_anchor[1], visual_anchor[2],
++                       g_cohsourcedev_webswing_anchor_preview_offset,
++                       anchor_fraction,
++                       bounds_ul[0], bounds_ul[1], bounds_ul[2],
++                       bounds_lr[0], bounds_lr[1], bounds_lr[2]);
++        s_webSwingNativeAnchorLoggedStyle = style;
++    }
++    return s_webSwingNativeAnchorFx != 0;
++}
++
++static void entClientWebSwingStopNativeAnchorFx(void)
++{
++    if (s_webSwingNativeAnchorFx)
++    {
++        s_webSwingNativeAnchorFx = fxDelete(s_webSwingNativeAnchorFx, SOFT_KILL);
++    }
++    s_webSwingNativeAnchorLoggedStyle = WEB_SWING_VISUAL_STYLE_LEGACY;
++    s_webSwingNativeAnchorDumpedStyle = WEB_SWING_VISUAL_STYLE_LEGACY;
++    entClientWebSwingStopMagicNativeParts();
++    if (s_webSwingTechAnchorNode)
++    {
++        gfxTreeDelete(s_webSwingTechAnchorNode);
++        s_webSwingTechAnchorNode = NULL;
++    }
++}
++
++static int entClientWebSwingIsTraveling(WebSwingVisualTetherState state)
++{
++    return state == WEB_SWING_VISUAL_TETHER_EXTENDING ||
++           state == WEB_SWING_VISUAL_TETHER_RETRACTING;
++}
++
++static F32 entClientWebSwingSmoothStep(F32 edge0, F32 edge1, F32 value)
++{
++    F32 t = MINMAX((value - edge0) / (edge1 - edge0), 0.0f, 1.0f);
++    return t * t * (3.0f - 2.0f * t);
++}
++
++static F32 entClientWebSwingAnchorFraction(F32 tether_progress)
++{
++    return entClientWebSwingSmoothStep(0.65f, 1.0f, tether_progress);
++}
++
++static U32 entClientWebSwingScaleAlpha(U32 color, F32 fraction)
++{
++    U32 alpha = (color >> 24) & 0xff;
++    U32 scaled_alpha;
++
++    fraction = MINMAX(fraction, 0.0f, 1.0f);
++    scaled_alpha = (U32)(alpha * fraction + 0.5f);
++    if (scaled_alpha > 0xff)
++        scaled_alpha = 0xff;
++    return (color & 0x00ffffff) | (scaled_alpha << 24);
++}
++
++static int entClientWebSwingBuildTetherBasis(const Vec3 tether_start,
++                                             const Vec3 tether_end,
++                                             WebSwingTetherBasis *basis)
++{
++    Vec3 reference;
++    F32 direction_length;
++
++    if (!basis)
++        return 0;
++
++    subVec3(tether_end, tether_start, basis->direction);
++    if (!validateVec3(basis->direction) ||
++        lengthVec3Squared(basis->direction) < 0.000001f)
++        return 0;
++
++    direction_length = normalVec3(basis->direction);
++    if (!FINITE(direction_length) || direction_length < 0.001f)
++        return 0;
++
++    // World up is well-conditioned for ordinary shots.  Switch to world
++    // right before the tether becomes nearly vertical so the cross product
++    // never collapses into a near-zero basis vector.
++    if (fabs(basis->direction[1]) < 0.9f)
++        setVec3(reference, 0.0f, 1.0f, 0.0f);
++    else
++        setVec3(reference, 1.0f, 0.0f, 0.0f);
++
++    crossVec3(basis->direction, reference, basis->u);
++    if (normalVec3(basis->u) < 0.001f)
++    {
++        setVec3(reference, 0.0f, 0.0f, 1.0f);
++        crossVec3(basis->direction, reference, basis->u);
++        if (normalVec3(basis->u) < 0.001f)
++            return 0;
++    }
++
++    crossVec3(basis->direction, basis->u, basis->v);
++    if (normalVec3(basis->v) < 0.001f)
++        return 0;
++
++    return validateVec3(basis->u) && validateVec3(basis->v);
++}
++
++static void entClientWebSwingPointAlongTether(const Vec3 tether_start,
++                                              const Vec3 tether_end,
++                                              const WebSwingTetherBasis *basis,
++                                              F32 normalized_distance,
++                                              F32 turns,
++                                              F32 phase_offset,
++                                              F32 radius,
++                                              Vec3 point)
++{
++    F32 phase;
++    F32 envelope;
++    F32 cosine;
++    F32 sine;
++    F32 offset;
++
++    if (normalized_distance <= 0.0f)
++    {
++        copyVec3(tether_start, point);
++        return;
++    }
++    if (normalized_distance >= 1.0f)
++    {
++        copyVec3(tether_end, point);
++        return;
++    }
++
++    point[0] = tether_start[0] + (tether_end[0] - tether_start[0]) * normalized_distance;
++    point[1] = tether_start[1] + (tether_end[1] - tether_start[1]) * normalized_distance;
++    point[2] = tether_start[2] + (tether_end[2] - tether_start[2]) * normalized_distance;
++
++    if (!radius || !basis)
++        return;
++
++    phase = phase_offset + turns * TWOPI * normalized_distance;
++    envelope = fsin(PI * normalized_distance);
++    cosine = fcos(phase);
++    sine = fsin(phase);
++    offset = radius * envelope;
++    point[0] += (basis->u[0] * cosine + basis->v[0] * sine) * offset;
++    point[1] += (basis->u[1] * cosine + basis->v[1] * sine) * offset;
++    point[2] += (basis->u[2] * cosine + basis->v[2] * sine) * offset;
++}
++
++static void entClientWebSwingDrawPath(const Vec3 tether_start,
++                                      const Vec3 tether_end,
++                                      const WebSwingTetherBasis *basis,
++                                      int segments,
++                                      F32 turns,
++                                      F32 phase_offset,
++                                      F32 radius,
++                                      U32 color,
++                                      F32 width)
++{
++    Vec3 previous;
++    Vec3 current;
++    int i;
++
++    if (!basis || segments < 1)
++        return;
++
++    entClientWebSwingPointAlongTether(tether_start, tether_end, basis,
++                                      0.0f, turns, phase_offset, radius, previous);
++    for (i = 1; i <= segments; ++i)
++    {
++        entClientWebSwingPointAlongTether(tether_start, tether_end, basis,
++                                          (F32)i / (F32)segments, turns,
++                                          phase_offset, radius, current);
++        drawLine3DWidth(previous, current, color, width);
++        copyVec3(current, previous);
++    }
++}
++
++static void entClientWebSwingPlanePoint(const Vec3 center,
++                                        const WebSwingTetherBasis *basis,
++                                        F32 radius,
++                                        F32 angle,
++                                        Vec3 point)
++{
++    F32 cosine = fcos(angle);
++    F32 sine = fsin(angle);
++
++    point[0] = center[0] + (basis->u[0] * cosine + basis->v[0] * sine) * radius;
++    point[1] = center[1] + (basis->u[1] * cosine + basis->v[1] * sine) * radius;
++    point[2] = center[2] + (basis->u[2] * cosine + basis->v[2] * sine) * radius;
++}
++
++static void entClientWebSwingDrawRing(const Vec3 center,
++                                      const WebSwingTetherBasis *basis,
++                                      F32 radius,
++                                      int segments,
++                                      F32 rotation,
++                                      U32 color,
++                                      F32 width)
++{
++    Vec3 first;
++    Vec3 previous;
++    Vec3 current;
++    F32 step;
++    int i;
++
++    if (!basis || radius <= 0.0f || segments < 3)
++        return;
++
++    step = TWOPI / (F32)segments;
++    entClientWebSwingPlanePoint(center, basis, radius, rotation, first);
++    copyVec3(first, previous);
++    for (i = 1; i < segments; ++i)
++    {
++        entClientWebSwingPlanePoint(center, basis, radius,
++                                    rotation + step * (F32)i, current);
++        drawLine3DWidth(previous, current, color, width);
++        copyVec3(current, previous);
++    }
++    drawLine3DWidth(previous, first, color, width);
++}
++
++static void entClientWebSwingDrawSegmentedRing(const Vec3 center,
++                                               const WebSwingTetherBasis *basis,
++                                               F32 radius,
++                                               int segments,
++                                               F32 gap_fraction,
++                                               F32 rotation,
++                                               U32 color,
++                                               F32 width)
++{
++    F32 step;
++    F32 gap;
++    F32 angle0;
++    F32 angle1;
++    Vec3 point0;
++    Vec3 point1;
++    int i;
++
++    if (!basis || radius <= 0.0f || segments < 3)
++        return;
++
++    step = TWOPI / (F32)segments;
++    gap = MINMAX(gap_fraction, 0.0f, 0.8f) * step;
++    for (i = 0; i < segments; ++i)
++    {
++        angle0 = rotation + step * (F32)i + gap * 0.5f;
++        angle1 = rotation + step * (F32)(i + 1) - gap * 0.5f;
++        entClientWebSwingPlanePoint(center, basis, radius, angle0, point0);
++        entClientWebSwingPlanePoint(center, basis, radius, angle1, point1);
++        drawLine3DWidth(point0, point1, color, width);
++    }
++}
++
++static void entClientWebSwingDrawSpokes(const Vec3 center,
++                                        const WebSwingTetherBasis *basis,
++                                        F32 inner_radius,
++                                        F32 outer_radius,
++                                        int count,
++                                        F32 rotation,
++                                        U32 color,
++                                        F32 width)
++{
++    F32 step;
++    F32 angle;
++    Vec3 inner;
++    Vec3 outer;
++    int i;
++
++    if (!basis || count < 1 || inner_radius < 0.0f || outer_radius <= inner_radius)
++        return;
++
++    step = TWOPI / (F32)count;
++    for (i = 0; i < count; ++i)
++    {
++        angle = rotation + step * (F32)i;
++        entClientWebSwingPlanePoint(center, basis, inner_radius, angle, inner);
++        entClientWebSwingPlanePoint(center, basis, outer_radius, angle, outer);
++        drawLine3DWidth(inner, outer, color, width);
++    }
++}
++
++static void entClientWebSwingPointAtAnchorProgress(const Vec3 tether_start,
++                                                   const Vec3 tether_to_anchor,
++                                                   F32 progress,
++                                                   Vec3 point)
++{
++    Vec3 delta;
++
++    progress = MAX(progress, 0.0f);
++    scaleVec3(tether_to_anchor, progress, delta);
++    addVec3(tether_start, delta, point);
++}
++
++static void entClientDrawWebSwingLegacy(const Vec3 tether_start,
++                                        const Vec3 tether_end,
++                                        const Vec3 tether_to_anchor,
++                                        F32 tether_progress,
++                                        WebSwingVisualTetherState tether_state)
++{
++    Vec3 leader_start;
++    F32 leader_progress;
++
++    // Preserve the original prototype output as the visual control condition.
++    drawLine3DWidth(tether_start, tether_end, s_webSwingLegacyOuterColor, 6.0f);
++    drawLine3DWidth(tether_start, tether_end, s_webSwingLegacyCoreColor, 2.5f);
++    if (entClientWebSwingIsTraveling(tether_state))
++    {
++        leader_progress = MAX(0.0f, tether_progress - 0.16f);
++        entClientWebSwingPointAtAnchorProgress(tether_start, tether_to_anchor,
++                                               leader_progress, leader_start);
++        drawLine3DWidth(leader_start, tether_end,
++                        s_webSwingLegacyLeaderOuterColor, 8.0f);
++        drawLine3DWidth(leader_start, tether_end,
++                        s_webSwingLegacyCoreColor, 3.5f);
++    }
++}
++
++static void entClientDrawWebSwingWebKnot(const Vec3 tether_end,
++                                         const WebSwingTetherBasis *basis,
++                                         F32 tether_progress)
++{
++    F32 knot_radius;
++    F32 angle;
++    Vec3 outer;
++    int i;
++
++    knot_radius = 0.10f * MINMAX(tether_progress * 2.0f, 0.0f, 1.0f);
++    if (!basis || knot_radius <= 0.001f)
++        return;
++
++    for (i = 0; i < 3; ++i)
++    {
++        angle = TWOPI * (F32)i / 3.0f + PI * 0.17f;
++        entClientWebSwingPlanePoint(tether_end, basis, knot_radius, angle, outer);
++        drawLine3DWidth(tether_end, outer, s_webSwingWebCoreColor, 0.65f);
++    }
++}
++
++static void entClientDrawWebSwingOrganicWeb(const Vec3 tether_start,
++                                            const Vec3 tether_end,
++                                            const Vec3 tether_to_anchor,
++                                            F32 tether_progress,
++                                            WebSwingVisualTetherState tether_state,
++                                            const WebSwingTetherBasis *basis)
++{
++    Vec3 leader_start;
++    F32 leader_progress;
++
++    // A narrow silhouette keeps the fibers readable without recreating the
++    // heavy laser-like bar used by the legacy prototype.
++    drawLine3DWidth(tether_start, tether_end, s_webSwingWebOuterColor, 2.4f);
++    entClientWebSwingDrawPath(tether_start, tether_end, basis,
++                              WEBSWING_WEB_SEGMENTS, 0.0f, 0.0f, 0.0f,
++                              s_webSwingWebCoreColor, 1.15f);
++    entClientWebSwingDrawPath(tether_start, tether_end, basis,
++                              WEBSWING_WEB_SEGMENTS, 1.15f, 0.0f, 0.12f,
++                              s_webSwingWebFilamentColorA, 0.75f);
++    entClientWebSwingDrawPath(tether_start, tether_end, basis,
++                              WEBSWING_WEB_SEGMENTS, 1.15f, PI, 0.12f,
++                              s_webSwingWebFilamentColorB, 0.75f);
++
++    if (entClientWebSwingIsTraveling(tether_state))
++    {
++        leader_progress = MAX(0.0f, tether_progress - 0.12f);
++        entClientWebSwingPointAtAnchorProgress(tether_start, tether_to_anchor,
++                                               leader_progress, leader_start);
++        drawLine3DWidth(leader_start, tether_end, s_webSwingWebLeaderColor, 2.0f);
++        drawLine3DWidth(leader_start, tether_end, s_webSwingWebCoreColor, 1.0f);
++    }
++
++    entClientDrawWebSwingWebKnot(tether_end, basis, tether_progress);
++}
++
++static void entClientDrawWebSwingTechAnchor(const Vec3 tether_end,
++                                            const WebSwingTetherBasis *basis,
++                                            F32 anchor_fraction)
++{
++    F32 frame = (F32)global_state.global_frame_count;
++    F32 pulse;
++    F32 rotation;
++    F32 radius;
++    U32 outer_color;
++    U32 inner_color;
++    U32 core_color;
++
++    if (!basis || anchor_fraction <= 0.001f)
++        return;
++
++    pulse = 1.0f + 0.04f * fsin(frame * 0.07f);
++    rotation = frame * 0.035f;
++    // Keep a readable hard-light halo behind the native drone body.  This is
++    // intentionally several feet across because the anchor is commonly high
++    // above the player and otherwise collapses to a few pixels.
++    radius = 2.75f * anchor_fraction * pulse;
++    outer_color = entClientWebSwingScaleAlpha(s_webSwingTechAnchorColor,
++                                              anchor_fraction * 0.72f);
++    inner_color = entClientWebSwingScaleAlpha(s_webSwingTechInnerColor,
++                                              anchor_fraction * 0.90f);
++    core_color = entClientWebSwingScaleAlpha(s_webSwingWebCoreColor,
++                                             anchor_fraction);
++
++    // The plane normal is the tether direction, so the hard-light point faces
++    // the player without moving the accepted endpoint.
++    entClientWebSwingDrawRing(tether_end, basis, radius, 6, rotation,
++                              outer_color, 1.25f);
++    entClientWebSwingDrawRing(tether_end, basis, radius * 0.52f, 6,
++                              -rotation * 0.65f, inner_color, 0.9f);
++    entClientWebSwingDrawSpokes(tether_end, basis, radius * 0.48f,
++                                radius * 0.82f, 4, rotation + HALFPI * 0.5f,
++                                inner_color, 0.85f);
++    entClientWebSwingDrawRing(tether_end, basis, radius * 0.23f, 4,
++                              rotation + QUARTERPI, core_color, 1.0f);
++}
++
++static void entClientDrawWebSwingTech(const Vec3 tether_start,
++                                      const Vec3 tether_end,
++                                      const Vec3 tether_to_anchor,
++                                      F32 tether_progress,
++                                      WebSwingVisualTetherState tether_state,
++                                      const WebSwingTetherBasis *basis)
++{
++    Vec3 leader_start;
++    F32 leader_progress;
++    F32 phase;
++    F32 anchor_fraction;
++
++    drawLine3DWidth(tether_start, tether_end, s_webSwingTechOuterColor, 2.6f);
++    entClientWebSwingDrawPath(tether_start, tether_end, basis,
++                              WEBSWING_TECH_SEGMENTS, 0.0f, 0.0f, 0.0f,
++                              s_webSwingTechCoreColor, 1.35f);
++    entClientWebSwingDrawPath(tether_start, tether_end, basis,
++                              WEBSWING_TECH_SEGMENTS, 0.70f, 0.0f, 0.065f,
++                              s_webSwingTechFilamentColor, 0.60f);
++    entClientWebSwingDrawPath(tether_start, tether_end, basis,
++                              WEBSWING_TECH_SEGMENTS, 0.70f, PI, 0.065f,
++                              s_webSwingTechFilamentColor, 0.60f);
++
++    if (entClientWebSwingIsTraveling(tether_state))
++    {
++        leader_progress = MAX(0.0f, tether_progress - 0.12f);
++        entClientWebSwingPointAtAnchorProgress(tether_start, tether_to_anchor,
++                                               leader_progress, leader_start);
++        drawLine3DWidth(leader_start, tether_end, s_webSwingTechLeaderColor, 2.8f);
++        drawLine3DWidth(leader_start, tether_end, s_webSwingWebCoreColor, 1.0f);
++    }
++
++    if (tether_state == WEB_SWING_VISUAL_TETHER_EXTENDING)
++    {
++        phase = (F32)global_state.global_frame_count * 0.05f;
++        entClientWebSwingDrawRing(tether_end, basis, 0.15f, 4,
++                                  phase + QUARTERPI, s_webSwingWebCoreColor, 1.0f);
++    }
++
++    anchor_fraction = entClientWebSwingAnchorFraction(tether_progress);
++    entClientDrawWebSwingTechAnchor(tether_end, basis, anchor_fraction);
++}
++
++static void entClientDrawWebSwingMagicAnchor(const Vec3 tether_end,
++                                             const WebSwingTetherBasis *basis,
++                                             F32 anchor_fraction)
++{
++    F32 frame = (F32)global_state.global_frame_count;
++    F32 pulse;
++    F32 outer_rotation;
++    F32 inner_rotation;
++    F32 radius;
++    U32 outer_color;
++    U32 inner_color;
++    U32 core_color;
++
++    if (!basis || anchor_fraction <= 0.001f)
++        return;
++
++    pulse = 1.0f + 0.055f * fsin(frame * 0.05f);
++    outer_rotation = frame * 0.018f;
++    inner_rotation = -frame * 0.025f;
++    // Match the native Rune-of-Protection-derived ceiling sigil with a broad
++    // backing glyph that remains legible at ordinary swing distance.
++    radius = 3.6f * anchor_fraction * pulse;
++    outer_color = entClientWebSwingScaleAlpha(s_webSwingMagicAnchorColor,
++                                              anchor_fraction * 0.78f);
++    inner_color = entClientWebSwingScaleAlpha(0xffb28eff,
++                                              anchor_fraction * 0.92f);
++    core_color = entClientWebSwingScaleAlpha(s_webSwingWebCoreColor,
++                                             anchor_fraction);
++
++    entClientWebSwingDrawSegmentedRing(tether_end, basis, radius, 10, 0.22f,
++                                       outer_rotation, outer_color, 1.05f);
++    entClientWebSwingDrawSegmentedRing(tether_end, basis, radius * 0.51f, 6,
++                                       0.12f, inner_rotation, inner_color, 0.85f);
++    entClientWebSwingDrawSpokes(tether_end, basis, radius * 0.46f,
++                                radius * 0.78f, 4,
++                                inner_rotation + QUARTERPI, inner_color, 0.75f);
++    entClientWebSwingDrawRing(tether_end, basis, radius * 0.20f, 4,
++                              inner_rotation + QUARTERPI, core_color, 0.95f);
++}
++
++static void entClientDrawWebSwingMagic(const Vec3 tether_start,
++                                       const Vec3 tether_end,
++                                       const Vec3 tether_to_anchor,
++                                       F32 tether_progress,
++                                       WebSwingVisualTetherState tether_state,
++                                       const WebSwingTetherBasis *basis)
++{
++    Vec3 leader_start;
++    F32 leader_progress;
++    F32 phase;
++    F32 anchor_fraction;
++
++    drawLine3DWidth(tether_start, tether_end, s_webSwingMagicOuterColor, 2.7f);
++    entClientWebSwingDrawPath(tether_start, tether_end, basis,
++                              WEBSWING_MAGIC_SEGMENTS, 0.0f, 0.0f, 0.0f,
++                              s_webSwingMagicCoreColor, 1.15f);
++    entClientWebSwingDrawPath(tether_start, tether_end, basis,
++                              WEBSWING_MAGIC_SEGMENTS, 0.85f, 0.0f, 0.105f,
++                              s_webSwingMagicFilamentColorA, 0.70f);
++    entClientWebSwingDrawPath(tether_start, tether_end, basis,
++                              WEBSWING_MAGIC_SEGMENTS, 1.10f, HALFPI, 0.09f,
++                              s_webSwingMagicFilamentColorB, 0.65f);
++
++    if (entClientWebSwingIsTraveling(tether_state))
++    {
++        leader_progress = MAX(0.0f, tether_progress - 0.12f);
++        entClientWebSwingPointAtAnchorProgress(tether_start, tether_to_anchor,
++                                               leader_progress, leader_start);
++        drawLine3DWidth(leader_start, tether_end, s_webSwingMagicLeaderColor, 2.3f);
++        drawLine3DWidth(leader_start, tether_end, s_webSwingMagicCoreColor, 1.0f);
++    }
++
++    if (tether_state == WEB_SWING_VISUAL_TETHER_EXTENDING)
++    {
++        phase = (F32)global_state.global_frame_count * 0.04f;
++        entClientWebSwingDrawRing(tether_end, basis, 0.14f, 4,
++                                  phase + QUARTERPI, s_webSwingMagicCoreColor, 0.95f);
++    }
++
++    anchor_fraction = entClientWebSwingAnchorFraction(tether_progress);
++    entClientDrawWebSwingMagicAnchor(tether_end, basis, anchor_fraction);
++}
++
++static WebSwingVisualStyle entClientWebSwingGetVisualStyle(Entity *e)
++{
++    S32 selection;
++
++    // The selector is deliberately local to the controlled player.  Other
++    // entities retain the established legacy tether presentation.
++    if (e != controlledPlayerPtr())
++        return WEB_SWING_VISUAL_STYLE_LEGACY;
++
++    selection = g_cohsourcedev_webswing_visual_selection;
++    if (selection < WEB_SWING_VISUAL_STYLE_LEGACY ||
++        selection > WEB_SWING_VISUAL_STYLE_MAGIC)
++        return WEB_SWING_VISUAL_STYLE_LEGACY;
++    return (WebSwingVisualStyle)selection;
++}
++
++void entClientDrawWebSwingTethers(void)
++{
++    static int last_render_frame = -1;
++    static Entity *last_tether_hand_log_player = NULL;
++    static U32 last_tether_hand_log_cycle = ~0u;
++    static U32 last_tether_hand_log_segment = ~0u;
++    int i;
++    int attached_count = 0;
++    int native_anchor_seen = 0;
++
++    // gfxSetupStuffToDraw is reached by several auxiliary viewports.  The
++    // frame guard makes this prototype visual exactly once per displayed
++    // client frame, even if a caller is added or reordered later.
++    if(last_render_frame == global_state.global_frame_count)
++        return;
++    last_render_frame = global_state.global_frame_count;
++
++    for(i = 1; i < entities_max; ++i)
++    {
++        Entity *e;
++        Vec3 tether_start;
++        Vec3 tether_end;
++        Vec3 tether_delta;
++        Vec3 tether_to_anchor;
++        Vec3 visual_anchor;
++        WebSwingTetherBasis tether_basis;
++        GfxNode *right_hand = NULL;
++        GfxNode *left_hand = NULL;
++        int right_hand_id = 0;
++        int left_hand_id = 0;
++        Mat4 right_hand_mat;
++        Mat4 left_hand_mat;
++        int hand_origin = 0;
++        int mode3_assisted_continuing_swing;
++        int has_tether_basis;
++        WebSwingVisualStyle visual_style;
++        F32 tether_progress;
++
++        if(!(entity_state[i] & ENTITY_IN_USE) || !(e = entities[i]) || !e->motion ||
++           !e->motion->web_swing_attached || !e->motion->web_swing_visual_tether_visible)
++            continue;
++
++        if(e->seq && gfxTreeNodeIsValid(e->seq->gfx_root, e->seq->gfx_root_unique_id))
++        {
++            right_hand = seqFindGfxNodeGivenBoneNum(e->seq, BONEID_HANDR);
++            left_hand = seqFindGfxNodeGivenBoneNum(e->seq, BONEID_HANDL);
++            right_hand_id = right_hand ? right_hand->unique_id : 0;
++            left_hand_id = left_hand ? left_hand->unique_id : 0;
++            if(gfxTreeNodeIsValid(right_hand, right_hand_id))
++                gfxTreeFindWorldSpaceMat(right_hand_mat, right_hand);
++            else
++                right_hand = NULL;
++            if(gfxTreeNodeIsValid(left_hand, left_hand_id))
++                gfxTreeFindWorldSpaceMat(left_hand_mat, left_hand);
++            else
++                left_hand = NULL;
++
++            mode3_assisted_continuing_swing =
++                e == controlledPlayerPtr() &&
++                e->motion->input.web_swing_enabled &&
++                (!global_state.webswing_dev ||
++                 g_cohsourcedev_webswing_anim_selection == 3) &&
++                e->motion->web_swing_active_backend &&
++                e->motion->web_swing_attached;
++
++            // Mode 3 alternates the newly fired web by completed swing cycle.
++            // Do not change the origin of an already-attached/retracting line:
++            // the old hand keeps ownership through ASCEND/APEX, and the new
++            // hand is selected throughout the next EXTENDING interval. Client
++            // prediction can first observe a replacement line after progress
++            // has advanced, so progress is not a valid selection gate.
++            if(mode3_assisted_continuing_swing &&
++               e->motion->web_swing_visual_tether_state == WEB_SWING_VISUAL_TETHER_EXTENDING)
++            {
++                int wants_left_hand =
++                    (e->motion->web_swing_assist_cycle_id & 1u) == 0u;
++                if(wants_left_hand && left_hand)
++                    e->motion->web_swing_visual_tether_left_hand = 1;
++                else if(!wants_left_hand && right_hand)
++                    e->motion->web_swing_visual_tether_left_hand = 0;
++                else if(left_hand)
++                    e->motion->web_swing_visual_tether_left_hand = 1;
++                else if(right_hand)
++                    e->motion->web_swing_visual_tether_left_hand = 0;
++                if(last_tether_hand_log_player != e ||
++                   last_tether_hand_log_cycle != e->motion->web_swing_assist_cycle_id ||
++                   last_tether_hand_log_segment != e->motion->web_swing_anim_segment_id)
++                {
++                    filelog_printf("webswing.log",
++                                   "WEB_SWING CLIENT tether_hand_select cycle_id=%u segment_id=%u hand=%s wants_left=%d progress=%.3f left_available=%d right_available=%d parity_applied_during_extension=1\n",
++                                   e->motion->web_swing_assist_cycle_id,
++                                   e->motion->web_swing_anim_segment_id,
++                                   e->motion->web_swing_visual_tether_left_hand ? "LEFT" : "RIGHT",
++                                   wants_left_hand,
++                                   e->motion->web_swing_visual_tether_progress,
++                                   left_hand != NULL,
++                                   right_hand != NULL);
++                    last_tether_hand_log_player = e;
++                    last_tether_hand_log_cycle = e->motion->web_swing_assist_cycle_id;
++                    last_tether_hand_log_segment = e->motion->web_swing_anim_segment_id;
++                }
++            }
++            else if(!mode3_assisted_continuing_swing &&
++                    e->motion->web_swing_visual_tether_state == WEB_SWING_VISUAL_TETHER_EXTENDING &&
++                    e->motion->web_swing_visual_tether_progress <= 0.001f)
++            {
++                e->motion->web_swing_visual_tether_left_hand =
++                    left_hand && (!right_hand || left_hand_mat[3][1] > right_hand_mat[3][1]);
++            }
++
++            if(!e->motion->web_swing_visual_tether_left_hand && right_hand)
++            {
++                copyVec3(right_hand_mat[3], tether_start);
++                hand_origin = 1;
++            }
++            else if(e->motion->web_swing_visual_tether_left_hand && left_hand)
++            {
++                copyVec3(left_hand_mat[3], tether_start);
++                hand_origin = 1;
++            }
++            else if(left_hand)
++            {
++                copyVec3(left_hand_mat[3], tether_start);
++                hand_origin = 1;
++            }
++            else if(right_hand)
++            {
++                copyVec3(right_hand_mat[3], tether_start);
++                hand_origin = 1;
++            }
++            else
++                copyVec3(e->seq->gfx_root->mat[3], tether_start);
++        }
++        else
++            copyVec3(ENTPOS(e), tether_start);
++        if(!hand_origin)
++            tether_start[1] += 3.0f;
++
++        tether_progress = MINMAX(e->motion->web_swing_visual_tether_progress, 0.0f, 1.0f);
++        if(tether_progress <= 0.001f)
++            continue;
++
++        visual_style = entClientWebSwingGetVisualStyle(e);
++        copyVec3(e->motion->web_swing_anchor, visual_anchor);
++
++        // Lore styles now use the real pendulum endpoint for both the visible
++        // tether and the anchor artwork.  Near-field "apparent" anchors were
++        // inherently camera-hostile: as the player swung around them, the rune
++        // or drone could pass directly through the foreground.  Keep the
++        // geometry truthful and solve readability with distance-based scale.
++        subVec3(visual_anchor, tether_start, tether_to_anchor);
++        scaleVec3(tether_to_anchor, tether_progress, tether_delta);
++        addVec3(tether_start, tether_delta, tether_end);
++
++        has_tether_basis = visual_style == WEB_SWING_VISUAL_STYLE_LEGACY ||
++                           entClientWebSwingBuildTetherBasis(tether_start,
++                                                             tether_end,
++                                                             &tether_basis);
++        if (!has_tether_basis)
++            visual_style = WEB_SWING_VISUAL_STYLE_LEGACY;
++
++        if (e == controlledPlayerPtr() &&
++            (visual_style == WEB_SWING_VISUAL_STYLE_TECH ||
++             visual_style == WEB_SWING_VISUAL_STYLE_MAGIC))
++        {
++            F32 anchor_fraction = entClientWebSwingAnchorFraction(tether_progress);
++            native_anchor_seen |= entClientWebSwingManageNativeAnchorFx(
++                visual_style, visual_anchor,
++                tether_start,
++                anchor_fraction);
++        }
++
++        switch (visual_style)
++        {
++            case WEB_SWING_VISUAL_STYLE_WEB:
++                entClientDrawWebSwingOrganicWeb(
++                    tether_start, tether_end, tether_to_anchor, tether_progress,
++                    (WebSwingVisualTetherState)e->motion->web_swing_visual_tether_state,
++                    &tether_basis);
++                break;
++
++            case WEB_SWING_VISUAL_STYLE_TECH:
++                entClientDrawWebSwingTech(
++                    tether_start, tether_end, tether_to_anchor, tether_progress,
++                    (WebSwingVisualTetherState)e->motion->web_swing_visual_tether_state,
++                    &tether_basis);
++                break;
++
++            case WEB_SWING_VISUAL_STYLE_MAGIC:
++                entClientDrawWebSwingMagic(
++                    tether_start, tether_end, tether_to_anchor, tether_progress,
++                    (WebSwingVisualTetherState)e->motion->web_swing_visual_tether_state,
++                    &tether_basis);
++                break;
++
++            case WEB_SWING_VISUAL_STYLE_LEGACY:
++            default:
++                entClientDrawWebSwingLegacy(
++                    tether_start, tether_end, tether_to_anchor, tether_progress,
++                    (WebSwingVisualTetherState)e->motion->web_swing_visual_tether_state);
++                break;
++        }
++        ++attached_count;
++    }
++
++    if (!native_anchor_seen)
++        entClientWebSwingStopNativeAnchorFx();
++
++    if (!attached_count)
++        entClientWebSwingResetMagicVisualAnchor();
++
++    if(attached_count && (global_state.global_frame_count % 30) == 0)
++    {
++        filelog_printf("webswing.log", "WEB_SWING CLIENT tether_render frame=%d attached_players=%d tether_lines=%d once_per_frame=1\n",
++                       global_state.global_frame_count, attached_count, attached_count);
++    }
++}
++#endif
++
+ Entity *entCreate(char * type)
+ {
+ Entity    *e;
+diff --git a/Game/src/entity/entclient.h b/Game/src/entity/entclient.h
+index a5051a1c0bfda007dab5ea4d57ff9b34e94cb40f..36482870edd4b28ef8f2a5d576976e67b4ff63e7 100644
+--- a/Game/src/entity/entclient.h
++++ b/Game/src/entity/entclient.h
+@@ -35,6 +35,7 @@ void entReset(void);
+ void entResetNonPlayer(void);
+ void entClientProcess(void);
+ void entClientProcessVisibility(void);
++void entClientDrawWebSwingTethers(void);
+ Entity *entCreate(char * type);
+ void entSetAlpha( Entity * e, int alpha, int type );
+ void changeBody(Entity * entity, const char * type);
+diff --git a/Game/src/game.c b/Game/src/game.c
+index 36ba07d84b91357fce0fc22992e4a5b83d28a6fd..217e97674d58a3b9451fe47391a13a0c956d84b3 100644
+--- a/Game/src/game.c
++++ b/Game/src/game.c
+@@ -151,8 +151,50 @@ static char testGameProgressString[100] = "";
+ static bool forceCrashCheck = false;
+ static char commandLineAccountName[32] = "";
+ static char commandLinePassword[32] = "";
++static char commandLineCaptureCharacter[32] = "";
+ static int commandLineAccountSet = 0;
+ static int commandLinePasswordSet = 0;
++static int commandLineCaptureCharacterSet = 0;
++static int s_webSwingAutoplayRequested = 0;
++static int s_webSwingAutoplayFramesRequested = 0;
++static int s_webSwingAutoplayFrameLimit = 450;
++static int s_webSwingAutoplayCameraYawRequested = 0;
++static F32 s_webSwingAutoplayCameraYawDegrees = 0.0f;
++static int s_webSwingAutoplayHighDropRequested = 0;
++static int s_webSwingAutoplayHighDropFrames = 0;
++
++typedef enum WebSwingAutoplayState
++{
++    WEBSWING_AUTOPLAY_WAIT_READY = 0,
++    WEBSWING_AUTOPLAY_WAIT_ARMED,
++    WEBSWING_AUTOPLAY_PREROLL,
++    WEBSWING_AUTOPLAY_FIRST_PRESS_DOWN,
++    WEBSWING_AUTOPLAY_WAIT_SECOND_PRESS,
++    WEBSWING_AUTOPLAY_HIGH_DROP_FALL,
++    WEBSWING_AUTOPLAY_RUNNING,
++} WebSwingAutoplayState;
++
++static WebSwingAutoplayState s_webSwingAutoplayState = WEBSWING_AUTOPLAY_WAIT_READY;
++static Entity *s_webSwingAutoplayPlayer = NULL;
++static int s_webSwingAutoplayPrerollFrames = 0;
++static int s_webSwingAutoplayOwnsUp = 0;
++static int s_webSwingAutoplayOwnsAutorun = 0;
++static int s_webSwingAutoplayPreviousAutorun = 0;
++static int s_webSwingAutoplayOwnsCapture = 0;
++static int s_webSwingAutoplayPreviousCapture = 0;
++static int s_webSwingAutoplayFrameCadence = 0;
++static int s_webSwingAutoplayFrameDumpCount = 0;
++static int s_webSwingAutoplayFrameLimitLogged = 0;
++static int s_webSwingAutoplayOwnsCameraYaw = 0;
++static F32 s_webSwingAutoplayPreviousCameraYaw = 0.0f;
++
++#define WEBSWING_AUTOPLAY_PREROLL_FRAMES 90
++#define WEBSWING_AUTOPLAY_CAPTURE_PREROLL_START 60
++#define WEBSWING_AUTOPLAY_CAPTURE_CADENCE 3
++#define WEBSWING_AUTOPLAY_CAPTURE_LIMIT_DEFAULT 450
++#define WEBSWING_AUTOPLAY_CAPTURE_LIMIT_MAX 450
++#define WEBSWING_AUTOPLAY_HIGH_DROP_MIN_FRAMES 45
++#define WEBSWING_AUTOPLAY_HIGH_DROP_Y 100.0f
+ 
+ ParticleSystemInfo sysInfo;
+ 
+@@ -265,6 +307,141 @@ void parseArgs(int argc,char **argv)
+             i += 2;
+             continue;
+         }
++        if (stricmp(argv[i], "-capturecharacter") == 0 && i + 1 < argc)
++        {
++            // Optional named quick-login selection. Deterministic captures and
++            // development gameplay sessions may need an existing character in
++            // a later slot without changing database ordering.
++            Strncpyt(commandLineCaptureCharacter, argv[i + 1]);
++            commandLineCaptureCharacterSet = 1;
++            game_state.quick_login = 1;
++            game_startupTracef("capturecharacter.argument=%s", commandLineCaptureCharacter);
++            i += 2;
++            continue;
++        }
++        if (stricmp(argv[i], "-animcanary") == 0 && i + 1 < argc)
++        {
++            // WebSwingDev-only startup diagnostic.  The normal command parser
++            // rejects this access-level-9 command before login; assign the
++            // client-side flag here so the sequencer can inject the authored
++            // canary after the player entity exists.
++            g_cohsourcedev_anim_canary = atoi(argv[i + 1]) != 0;
++            game_startupTracef("animcanary.argument=%d", g_cohsourcedev_anim_canary);
++            i += 2;
++            continue;
++        }
++        if (stricmp(argv[i], "-webswinganim") == 0 && i + 1 < argc)
++        {
++            int mode = atoi(argv[i + 1]);
++            if (mode < 0 || mode > 3)
++                mode = 0;
++            g_cohsourcedev_webswing_anim_selection = mode;
++            game_startupTracef("webswinganim.argument=%d", g_cohsourcedev_webswing_anim_selection);
++            i += 2;
++            continue;
++        }
++        if (stricmp(argv[i], "-webswingphysics") == 0 && i + 1 < argc)
++        {
++            int mode = atoi(argv[i + 1]);
++            if (mode < 0 || mode > 1)
++                mode = 1;
++            g_cohsourcedev_webswing_physics_selection = mode;
++            game_startupTracef("webswingphysics.argument=%d", g_cohsourcedev_webswing_physics_selection);
++            i += 2;
++            continue;
++        }
++        if (stricmp(argv[i], "-webswingvisual") == 0 && i + 1 < argc)
++        {
++            int style = atoi(argv[i + 1]);
++            if (style < 0 || style > 3)
++                style = 0;
++            g_cohsourcedev_webswing_visual_selection = style;
++            game_startupTracef("webswingvisual.argument=%d", g_cohsourcedev_webswing_visual_selection);
++            i += 2;
++            continue;
++        }
++        if (stricmp(argv[i], "-webswingcapture") == 0)
++        {
++            // Optional development startup convenience.  Runtime toggling
++            // remains the normal workflow and is provided by the local client
++            // command in cmdcommon.c.
++            g_cohsourcedev_webswing_capture = 1;
++            game_startupTracef("webswingcapture.argument=%d", g_cohsourcedev_webswing_capture);
++            i++;
++            continue;
++        }
++        if (stricmp(argv[i], "-webswingautoplay") == 0)
++        {
++            // Explicit WebSwingDev-only input driver for unattended visual
++            // capture. The runtime gate is checked again after login before
++            // any movement state is touched.
++            s_webSwingAutoplayRequested = 1;
++            game_startupTrace("webswingautoplay.argument=1");
++            i++;
++            continue;
++        }
++        if (stricmp(argv[i], "-webswingautoplayframes") == 0)
++        {
++            // This has no effect unless both WebSwingDev and the explicit
++            // autoplay driver are enabled. It resets to the known-good test
++            // start and records bounded in-engine framebuffer evidence. An
++            // optional positive count keeps acceptance runs inside a measured
++            // non-steering route; omitting it preserves the 450-frame default.
++            s_webSwingAutoplayFramesRequested = 1;
++            s_webSwingAutoplayFrameLimit =
++                WEBSWING_AUTOPLAY_CAPTURE_LIMIT_DEFAULT;
++            if (i + 1 < argc && argv[i + 1][0] != '-')
++            {
++                int requested_limit = atoi(argv[i + 1]);
++                if (requested_limit > 0 &&
++                    requested_limit <= WEBSWING_AUTOPLAY_CAPTURE_LIMIT_MAX)
++                {
++                    s_webSwingAutoplayFrameLimit = requested_limit;
++                    i++;
++                }
++            }
++            game_startupTracef("webswingautoplayframes.argument=1 limit=%d",
++                               s_webSwingAutoplayFrameLimit);
++            i++;
++            continue;
++        }
++        if (stricmp(argv[i], "-webswinganchorpreview") == 0 && i + 1 < argc)
++        {
++            g_cohsourcedev_webswing_anchor_preview_offset = atof(argv[i + 1]);
++            if (g_cohsourcedev_webswing_anchor_preview_offset < 0.0f)
++                g_cohsourcedev_webswing_anchor_preview_offset = 0.0f;
++            if (g_cohsourcedev_webswing_anchor_preview_offset > 200.0f)
++                g_cohsourcedev_webswing_anchor_preview_offset = 200.0f;
++            game_startupTracef("webswinganchorpreview.argument=%.3f",
++                               g_cohsourcedev_webswing_anchor_preview_offset);
++            i += 2;
++            continue;
++        }
++        if (stricmp(argv[i], "-webswingautoplayyaw") == 0 && i + 1 < argc)
++        {
++            // Optional bounded-capture aid. Hold the third-person camera at a
++            // fixed yaw around the player so limb travel can be reviewed from
++            // a true side/three-quarter view while autoplay changes heading.
++            s_webSwingAutoplayCameraYawRequested = 1;
++            s_webSwingAutoplayCameraYawDegrees = (F32)atof(argv[i + 1]);
++            game_startupTracef("webswingautoplayyaw.argument=1 degrees=%.3f",
++                               s_webSwingAutoplayCameraYawDegrees);
++            i += 2;
++            continue;
++        }
++        if (stricmp(argv[i], "-webswingautoplayhighdrop") == 0)
++        {
++            // Development-only deterministic high-air catch.  The ordinary
++            // autoplay still performs the first Space/jump so the real
++            // second-press Web Swing path is exercised.  Immediately after
++            // that jump becomes airborne we move the player well above the
++            // verified road and let world gravity establish a real fall before
++            // the second press attaches the web.
++            s_webSwingAutoplayHighDropRequested = 1;
++            game_startupTrace("webswingautoplayhighdrop.argument=1");
++            i++;
++            continue;
++        }
+         if (stricmp(argv[i], "-password") == 0 && i + 1 < argc)
+         {
+             Strncpyt(commandLinePassword, argv[i + 1]);
+@@ -995,6 +1172,30 @@ void checkQuickLogin(void)
+         // a fresh development account can create a reproducible character.
+         if (auth_result && db_result && db_info.players && quick_slot >= 0 && quick_slot < db_info.max_slots) {
+             int newchar;
++            if (commandLineCaptureCharacterSet)
++            {
++                int requested_slot = -1;
++                int slot;
++                for (slot = 0; slot < db_info.max_slots; ++slot)
++                {
++                    if (db_info.players[slot].name[0] &&
++                        stricmp(db_info.players[slot].name, commandLineCaptureCharacter) == 0)
++                    {
++                        requested_slot = slot;
++                        break;
++                    }
++                }
++                if (requested_slot < 0)
++                {
++                    game_startupTracef("character.selection.requested-not-found name=%s",
++                                       commandLineCaptureCharacter);
++                    writeConsole(OUTPUT_ERROR,
++                                 "Requested quick-login character not found: %s",
++                                 commandLineCaptureCharacter);
++                    return;
++                }
++                quick_slot = requested_slot;
++            }
+             gPlayerNumber = quick_slot;
+             newchar = stricmp(db_info.players[gPlayerNumber].name, "empty")==0;
+             if (!newchar) {
+@@ -1449,6 +1650,18 @@ void parseArgs0(int argc, char **argv)
+             if (i == argc-1 || argv[i+1][0]!='0')
+                 game_state.noPBuffers = 1;
+         }
++        else if (CHECKARG("-nopopups"))
++        {
++            // This must be recognized before game_beforeParseArgs() performs
++            // the development-mode old-driver check.
++            g_win_ignore_popups = 1;
++            bSkipArgIfPresent = true;
++        }
++        else if (CHECKARG("-webswingdev"))
++        {
++            global_state.webswing_dev = 1;
++            bSkipArgIfPresent = true;
++        }
+         else if (CHECKARG("-texwordeditor"))
+         {
+             estrPrintCharString(&game_state.texWordEdit, "1");
+@@ -1735,7 +1948,7 @@ void game_beforeFolderCacheIgnore(int timer, int argc, char **argv)
+ 
+ static void checkForCrash()
+ {
+-    if (!isDevelopmentMode() || forceCrashCheck)
++    if (forceCrashCheck || (!g_win_ignore_popups && !isDevelopmentMode()))
+     {
+         char progressUserString[100];
+         PROGRESSDIALOGTYPE type = PROGRESSDIALOGTYPE_NONE;
+@@ -1790,6 +2003,11 @@ void game_beforeParseArgs(int doLogging)
+         SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
+ 
+     FolderCacheChooseMode();
++    if (global_state.webswing_dev)
++        FolderCacheSetMode(FOLDER_CACHE_MODE_I_LIKE_PIGS);
++    game_startupTracef("runtime.mode webSwingDev=%d devMode=%d productionMode=%d usingDevData=%d noFileCheck=%d folderCacheMode=%d",
++                       global_state.webswing_dev, isDevelopmentMode(), isProductionMode(), fileIsUsingDevData(),
++                       global_state.no_file_change_check, FolderCacheGetMode());
+     FolderCacheEnableCallbacks(0);
+     FolderCacheSetManualCallbackMode(1);
+     sharedMemorySetMode(SMM_DISABLED);
+@@ -2336,6 +2554,11 @@ static const CaptureShot s_captureShots[] = {
+     { "AtlasPlaza_North_01",    "-5504.30 -16.00 -1926.04 0.1632 3.1486 0.0000",  "30", 16, 1 },
+     { "AtlasPlaza_West_01",     "-5504.30 -16.00 -1926.04 0.1632 -1.5703 0.0000", "30", 16, 1 },
+     { "AtlasPlaza_Closeup_01",  "-5504.30 -16.00 -1926.04 0.1632 0.0070 0.0000",  "10", 16, 1 },
++    // Full-body animation audition views. These keep the proof close enough
++    // to judge hands and limb roll while retaining hips, knees, and feet.
++    { "AtlasPlaza_AnimFront_01", "-5504.30 -16.00 -1926.04 0.0900 0.0070 0.0000",  "18", 16, 1 },
++    { "AtlasPlaza_AnimThreeQuarter_01", "-5504.30 -16.00 -1926.04 0.0900 0.7924 0.0000", "18", 16, 1 },
++    { "AtlasPlaza_AnimSide_01",  "-5504.30 -16.00 -1926.04 0.0900 1.5778 0.0000",  "18", 16, 1 },
+     { "AtlasPlaza_NightEast_01","-5504.30 -16.00 -1926.04 0.1632 1.5778 0.0000",  "30", 0,  1 },
+     { "AtlasPlaza_NightCityHall_01","-5504.30 -16.00 -1926.04 0.1632 0.0070 0.0000", "30", 0, 1 },
+     // Issue #21 authoring views use the verified in-zone Atlas camera without
+@@ -2350,9 +2573,9 @@ static const CaptureShot s_captureShots[] = {
+     // First non-Atlas regression shot: Founders Falls canals. Reaching map
+     // 10 exercises the mapmove capture path, and the view deterministically
+     // binds alphaDetail (fragment 68), the fancy-water material (fragment
+-    // 116, once GFXF_MULTITEX survives startup — the shadow-registry pin in
++    // 116, once GFXF_MULTITEX survives startup - the shadow-registry pin in
+     // agent/capture.ps1 keeps it alive) and the multi9 family (fragments
+-    // 120+) — coverage Atlas Park does not provide. See
++    // 120+) - coverage Atlas Park does not provide. See
+     // docs/agent-status.md for the water/multitex feature-state history.
+     { "FoundersCanal_01", "4497.49 60.00 991.49 0.2500 0.7854 0.0000", "30", 16, 10 },
+     { "TalosArrive_01", "", "30", 16, 8 },
+@@ -2369,6 +2592,330 @@ static const CaptureShot *captureFindShot(const char *label)
+     return &s_captureShots[0];
+ }
+ 
++static const char *game_webSwingAutoplayStateName(WebSwingAutoplayState state)
++{
++    switch (state)
++    {
++        case WEBSWING_AUTOPLAY_WAIT_READY:       return "WAIT_READY";
++        case WEBSWING_AUTOPLAY_WAIT_ARMED:       return "WAIT_ARMED";
++        case WEBSWING_AUTOPLAY_PREROLL:          return "PREROLL";
++        case WEBSWING_AUTOPLAY_FIRST_PRESS_DOWN: return "FIRST_PRESS_DOWN";
++        case WEBSWING_AUTOPLAY_WAIT_SECOND_PRESS:return "WAIT_SECOND_PRESS";
++        case WEBSWING_AUTOPLAY_HIGH_DROP_FALL:   return "HIGH_DROP_FALL";
++        case WEBSWING_AUTOPLAY_RUNNING:          return "RUNNING";
++        default:                                 return "UNKNOWN";
++    }
++}
++
++static void game_transitionWebSwingAutoplay(WebSwingAutoplayState next,
++                                             const char *reason)
++{
++    filelog_printf("webswing.log",
++                   "WEB_SWING CLIENT autoplay previous=%s state=%s reason=%s preroll_frames=%d\n",
++                   game_webSwingAutoplayStateName(s_webSwingAutoplayState),
++                   game_webSwingAutoplayStateName(next),
++                   reason ? reason : "unspecified",
++                   s_webSwingAutoplayPrerollFrames);
++    s_webSwingAutoplayState = next;
++}
++
++static void game_resetWebSwingAutoplay(int restore_controls, const char *reason)
++{
++    if (restore_controls && s_webSwingAutoplayOwnsUp)
++    {
++        updateControlState(CONTROLID_UP, MOVE_INPUT_OTHER, 0,
++                           control_state.time.last_send_ms);
++    }
++    if (restore_controls && s_webSwingAutoplayOwnsAutorun)
++    {
++        control_state.autorun = s_webSwingAutoplayPreviousAutorun;
++        updateControlState(CONTROLID_FORWARD, MOVE_INPUT_OTHER,
++                           control_state.autorun ? 1 : 0,
++                           control_state.time.last_send_ms);
++    }
++    if (s_webSwingAutoplayOwnsCapture)
++        g_cohsourcedev_webswing_capture = s_webSwingAutoplayPreviousCapture;
++
++    if (s_webSwingAutoplayState != WEBSWING_AUTOPLAY_WAIT_READY)
++        game_transitionWebSwingAutoplay(WEBSWING_AUTOPLAY_WAIT_READY, reason);
++    s_webSwingAutoplayPrerollFrames = 0;
++    s_webSwingAutoplayOwnsUp = 0;
++    s_webSwingAutoplayOwnsAutorun = 0;
++    s_webSwingAutoplayOwnsCapture = 0;
++    s_webSwingAutoplayPlayer = NULL;
++    s_webSwingAutoplayFrameCadence = 0;
++    s_webSwingAutoplayFrameDumpCount = 0;
++    s_webSwingAutoplayFrameLimitLogged = 0;
++    s_webSwingAutoplayHighDropFrames = 0;
++    if (s_webSwingAutoplayOwnsCameraYaw)
++    {
++        control_state.cam_pyr_offset[1] = s_webSwingAutoplayPreviousCameraYaw;
++        cam_info.rotate_scale = 1;
++        s_webSwingAutoplayOwnsCameraYaw = 0;
++    }
++}
++
++static void game_applyWebSwingAutoplayCamera(void)
++{
++    if (!s_webSwingAutoplayRequested || !global_state.webswing_dev ||
++        !s_webSwingAutoplayCameraYawRequested)
++        return;
++
++    // engine_update() consumes this value when it builds the third-person
++    // camera. Reapply it every frame because normal follow-camera logic may
++    // otherwise recenter the offset as the autoplay route changes heading.
++    control_state.cam_pyr_offset[1] = RAD(s_webSwingAutoplayCameraYawDegrees);
++    cam_info.rotate_scale = 1;
++}
++
++static void game_enableWebSwingAutoplayAutorun(void)
++{
++    control_state.autorun = 1;
++    updateControlState(CONTROLID_FORWARD, MOVE_INPUT_OTHER, 1,
++                       control_state.time.last_send_ms);
++}
++
++static void game_processWebSwingAutoplay(void)
++{
++    extern int glob_have_camera_pos;
++    Entity *player = controlledPlayerPtr();
++    int ready;
++
++    if (!s_webSwingAutoplayRequested || !global_state.webswing_dev)
++    {
++        if (s_webSwingAutoplayState != WEBSWING_AUTOPLAY_WAIT_READY)
++            game_resetWebSwingAutoplay(1, "development_gate_lost");
++        return;
++    }
++
++    ready = commConnected() && player && player->motion &&
++            glob_have_camera_pos == PLAYING_GAME &&
++            game_state.game_mode == SHOW_GAME && isMenu(MENU_GAME) &&
++            control_state.first_packet_sent &&
++            control_state.mapserver_responding;
++    if (!ready)
++    {
++        if (s_webSwingAutoplayPlayer ||
++            s_webSwingAutoplayState != WEBSWING_AUTOPLAY_WAIT_READY)
++            game_resetWebSwingAutoplay(1, "world_readiness_lost");
++        return;
++    }
++
++    if (s_webSwingAutoplayPlayer && s_webSwingAutoplayPlayer != player)
++        game_resetWebSwingAutoplay(1, "controlled_player_changed");
++
++    switch (s_webSwingAutoplayState)
++    {
++        case WEBSWING_AUTOPLAY_WAIT_READY:
++            s_webSwingAutoplayPlayer = player;
++            s_webSwingAutoplayPreviousAutorun = control_state.autorun;
++            s_webSwingAutoplayOwnsAutorun = 1;
++            if (s_webSwingAutoplayCameraYawRequested && !s_webSwingAutoplayOwnsCameraYaw)
++            {
++                s_webSwingAutoplayPreviousCameraYaw = control_state.cam_pyr_offset[1];
++                s_webSwingAutoplayOwnsCameraYaw = 1;
++            }
++            if (s_webSwingAutoplayFramesRequested)
++            {
++                control_state.autorun = 0;
++                updateControlState(CONTROLID_FORWARD, MOVE_INPUT_OTHER, 0,
++                                   control_state.time.last_send_ms);
++                // Face south from farther upstream on the same verified Steel
++                // Canyon road. Starting at z=900 reached the Silver Lake
++                // waterfront late in the bounded run; this preserves the route
++                // and provides the full evidence window before that boundary.
++                cmdParse("setpospyr -2369.407 -84.500 1800.000 0 3.141593 0");
++                // Keep hands and feet in frame throughout the larger release
++                // arc. This is scoped to the explicit bounded dev harness.
++                cmdParse("camdist 24");
++                filelog_printf("webswing.log",
++                                "WEB_SWING CLIENT autoplay_frames reset_position=1 "
++                                "position=-2369.407,-84.500,1800.000 "
++                                "yaw=3.141593 camera_distance=24 route=southbound_open_road\n");
++            }
++            else
++            {
++                game_enableWebSwingAutoplayAutorun();
++            }
++            s_webSwingAutoplayPreviousCapture = g_cohsourcedev_webswing_capture;
++            s_webSwingAutoplayOwnsCapture = 1;
++            g_cohsourcedev_webswing_capture = 1;
++            commAddInput("webswingbackend 1");
++            commAddInput("webswing 1");
++            game_transitionWebSwingAutoplay(WEBSWING_AUTOPLAY_WAIT_ARMED,
++                                            "ready_arm_requested");
++            break;
++
++        case WEBSWING_AUTOPLAY_WAIT_ARMED:
++            if (control_state.server_state &&
++                control_state.server_state->web_swing &&
++                control_state.server_state->web_swing_backend &&
++                !player->motion->falling && !player->motion->jumping &&
++                !player->motion->web_swing_attached)
++            {
++                s_webSwingAutoplayPrerollFrames = 0;
++                game_transitionWebSwingAutoplay(WEBSWING_AUTOPLAY_PREROLL,
++                                                "server_confirmed_grounded");
++            }
++            break;
++
++        case WEBSWING_AUTOPLAY_PREROLL:
++            if (!control_state.server_state ||
++                !control_state.server_state->web_swing ||
++                !control_state.server_state->web_swing_backend)
++            {
++                s_webSwingAutoplayPrerollFrames = 0;
++                commAddInput("webswingbackend 1");
++                commAddInput("webswing 1");
++                game_transitionWebSwingAutoplay(WEBSWING_AUTOPLAY_WAIT_ARMED,
++                                                "server_confirmation_lost");
++            }
++            else if (player->motion->falling || player->motion->jumping ||
++                     player->motion->web_swing_attached)
++            {
++                s_webSwingAutoplayPrerollFrames = 0;
++            }
++            else if (++s_webSwingAutoplayPrerollFrames >= WEBSWING_AUTOPLAY_PREROLL_FRAMES)
++            {
++                if (s_webSwingAutoplayFramesRequested)
++                    game_enableWebSwingAutoplayAutorun();
++                updateControlState(CONTROLID_UP, MOVE_INPUT_OTHER, 1,
++                                   control_state.time.last_send_ms);
++                s_webSwingAutoplayOwnsUp = 1;
++                game_transitionWebSwingAutoplay(WEBSWING_AUTOPLAY_FIRST_PRESS_DOWN,
++                                                "preroll_complete_90_frames");
++            }
++            break;
++
++        case WEBSWING_AUTOPLAY_FIRST_PRESS_DOWN:
++            if (player->motion->falling || player->motion->jumping)
++            {
++                updateControlState(CONTROLID_UP, MOVE_INPUT_OTHER, 0,
++                                   control_state.time.last_send_ms);
++                s_webSwingAutoplayOwnsUp = 0;
++                if (s_webSwingAutoplayHighDropRequested)
++                {
++                    cmdParse("setpospyr -2369.407 100.000 1800.000 0 3.141593 0");
++                    s_webSwingAutoplayHighDropFrames = 0;
++                    filelog_printf("webswing.log",
++                                   "WEB_SWING CLIENT autoplay_high_drop teleported=1 position=-2369.407,100.000,1800.000 target_min_fall_frames=%d\n",
++                                   WEBSWING_AUTOPLAY_HIGH_DROP_MIN_FRAMES);
++                    game_transitionWebSwingAutoplay(WEBSWING_AUTOPLAY_HIGH_DROP_FALL,
++                                                    "first_jump_airborne_high_drop");
++                }
++                else
++                {
++                    game_transitionWebSwingAutoplay(WEBSWING_AUTOPLAY_WAIT_SECOND_PRESS,
++                                                    "first_jump_airborne_release");
++                }
++            }
++            break;
++
++        case WEBSWING_AUTOPLAY_WAIT_SECOND_PRESS:
++            if (player->motion->web_swing_second_press_armed &&
++                (player->motion->falling || player->motion->jumping))
++            {
++                updateControlState(CONTROLID_UP, MOVE_INPUT_OTHER, 1,
++                                   control_state.time.last_send_ms);
++                s_webSwingAutoplayOwnsUp = 1;
++                game_transitionWebSwingAutoplay(WEBSWING_AUTOPLAY_RUNNING,
++                                                "second_press_armed_airborne");
++            }
++            else if (!player->motion->falling && !player->motion->jumping)
++            {
++                game_transitionWebSwingAutoplay(WEBSWING_AUTOPLAY_WAIT_ARMED,
++                                                "landed_before_second_press");
++            }
++            break;
++
++        case WEBSWING_AUTOPLAY_HIGH_DROP_FALL:
++            ++s_webSwingAutoplayHighDropFrames;
++            if (player->motion->web_swing_second_press_armed &&
++                player->motion->falling &&
++                s_webSwingAutoplayHighDropFrames >= WEBSWING_AUTOPLAY_HIGH_DROP_MIN_FRAMES &&
++                player->motion->vel[1] <= -1.50f)
++            {
++                filelog_printf("webswing.log",
++                               "WEB_SWING CLIENT autoplay_high_drop cast frames=%d player_y=%.3f vertical_speed=%.3f highest_y=%.3f measured_fall=%.3f\n",
++                               s_webSwingAutoplayHighDropFrames,
++                               ENTPOSY(player),
++                               player->motion->vel[1],
++                               player->motion->highest_height,
++                               MAX(0.0f, player->motion->highest_height - ENTPOSY(player)));
++                updateControlState(CONTROLID_UP, MOVE_INPUT_OTHER, 1,
++                                   control_state.time.last_send_ms);
++                s_webSwingAutoplayOwnsUp = 1;
++                game_transitionWebSwingAutoplay(WEBSWING_AUTOPLAY_RUNNING,
++                                                "high_drop_second_press");
++            }
++            break;
++
++        case WEBSWING_AUTOPLAY_RUNNING:
++            // Keep the second Space press held. Releasing it is the real Web
++            // Swing detach command; automatic assisted cycles need it on.
++            break;
++    }
++}
++
++static void game_processWebSwingAutoplayFrames(void)
++{
++    int capture_active;
++
++    if (!s_webSwingAutoplayFramesRequested ||
++        !s_webSwingAutoplayRequested ||
++        !global_state.webswing_dev)
++        return;
++
++    capture_active =
++        (s_webSwingAutoplayState == WEBSWING_AUTOPLAY_PREROLL &&
++         s_webSwingAutoplayPrerollFrames >= WEBSWING_AUTOPLAY_CAPTURE_PREROLL_START) ||
++        s_webSwingAutoplayState == WEBSWING_AUTOPLAY_FIRST_PRESS_DOWN ||
++        s_webSwingAutoplayState == WEBSWING_AUTOPLAY_WAIT_SECOND_PRESS ||
++        s_webSwingAutoplayState == WEBSWING_AUTOPLAY_HIGH_DROP_FALL ||
++        s_webSwingAutoplayState == WEBSWING_AUTOPLAY_RUNNING;
++    if (!capture_active)
++        return;
++
++    if (s_webSwingAutoplayFrameDumpCount >= s_webSwingAutoplayFrameLimit)
++    {
++        if (!s_webSwingAutoplayFrameLimitLogged)
++        {
++            filelog_printf("webswing.log",
++                           "WEB_SWING CLIENT autoplay_frames state=CAPTURE_LIMIT "
++                           "reason=bounded_capture_complete frames=%d cadence=%d stopping_autoplay=1\n",
++                           s_webSwingAutoplayFrameDumpCount,
++                           WEBSWING_AUTOPLAY_CAPTURE_CADENCE);
++            s_webSwingAutoplayFrameLimitLogged = 1;
++        }
++
++        // A bounded visual audit is one transaction: once the final requested
++        // screenshot exists, release the synthetic Space/autorun inputs and
++        // restore the previous capture flag as well.  Leaving autoplay running
++        // after the image evidence stopped used to create minutes of unrelated
++        // telemetry (and even terrain collisions) that looked like late-cycle
++        // Web Swing failures despite occurring outside the bounded review.
++        s_webSwingAutoplayRequested = 0;
++        s_webSwingAutoplayFramesRequested = 0;
++        game_resetWebSwingAutoplay(1, "bounded_capture_complete");
++        return;
++    }
++
++    if (s_webSwingAutoplayFrameCadence++ % WEBSWING_AUTOPLAY_CAPTURE_CADENCE)
++        return;
++
++    if (s_webSwingAutoplayFrameDumpCount == 0)
++    {
++        filelog_printf("webswing.log",
++                       "WEB_SWING CLIENT autoplay_frames state=CAPTURE_STARTED "
++                       "reason=late_preroll output=webswing-autoplay-capture "
++                       "limit=%d cadence=%d\n",
++                       s_webSwingAutoplayFrameLimit,
++                       WEBSWING_AUTOPLAY_CAPTURE_CADENCE);
++    }
++    gfxScreenDump("webswing-autoplay-capture", 1, "jpg");
++    s_webSwingAutoplayFrameDumpCount++;
++}
++
+ static void game_processCapture(void)
+ {
+     extern int glob_have_camera_pos;
+@@ -2459,10 +3006,10 @@ static void game_processCapture(void)
+             sprintf_s(SAFESTR(command), "camdist %s", shot->camdist);
+             cmdParse(command);
+             // Camera placement, first match wins:
+-            // 1. bin/capture_override.txt — one line "x y z pitch yaw roll";
++            // 1. bin/capture_override.txt - one line "x y z pitch yaw roll";
+             //    a developer iteration aid that retargets the camera without
+             //    a rebuild. Delete the file for table-driven captures.
+-            // 2. The shot's posPyr — a setpospyr argument string.
++            // 2. The shot's posPyr - a setpospyr argument string.
+             // 3. An empty posPyr keeps the arrival position (map transfer
+             //    spawn), which is itself deterministic per map.
+             {
+@@ -2494,6 +3041,37 @@ static void game_processCapture(void)
+             sprintf_s(SAFESTR(command), "timeset %d", shot->timeHour);
+             cmdParse(command);
+             cmdParse("timescale 0");
++            // capture_override.txt lines 3+ are executed as console commands
++            // after camera placement (e.g. "camyawoffset 180" for a front
++            // view).  This is a developer iteration aid; delete the file for
++            // table-driven captures.
++            {
++                FILE *overrideFile = fopen("capture_override.txt", "r");
++                if (overrideFile)
++                {
++                    char line[256];
++                    int skip = 2;
++                    while (fgets(line, sizeof(line), overrideFile))
++                    {
++                        char *newline;
++                        if (skip > 0)
++                        {
++                            --skip;
++                            continue;
++                        }
++                        newline = strchr(line, '\n');
++                        if (newline) *newline = '\0';
++                        newline = strchr(line, '\r');
++                        if (newline) *newline = '\0';
++                        if (line[0])
++                        {
++                            game_startupTracef("capture.command.override cmd=%s", line);
++                            cmdParse(line);
++                        }
++                    }
++                    fclose(overrideFile);
++                }
++            }
+             // Diagnostic: water mode/feature state at capture time. The
+             // multi feature gate explains which materials the map's
+             // textures bound at load (see docs/agent-status.md).
+@@ -2522,7 +3100,11 @@ static void game_processCapture(void)
+         // sun, and fog systems interpolate toward the new state for a few
+         // seconds, so the first capture after a mapserver restart would
+         // otherwise catch a mid-transition image.
+-        if (++game_state.capture_frame_count < 300)
++        // Canary captures judge a moving player rather than the environment.
++        // Capture after one second so gravity cannot carry an airborne source
++        // pose away from the close authoring camera. Normal regression shots
++        // retain the established five-second lighting settle.
++        if (++game_state.capture_frame_count < (g_cohsourcedev_anim_canary ? 60 : 300))
+             return;
+ 
+         game_startupTracef("capture.camera.screenshot-state cam=%.2f %.2f %.2f pyr=%.4f %.4f %.4f target=%.4f %.4f %.4f",
+@@ -2769,6 +3351,8 @@ int game_mainLoop(int timer)
+         }
+ 
+ 
++        game_applyWebSwingAutoplayCamera();
++
+         PERFINFO_AUTO_START("engine_update", 1);
+             if (firstFrame)
+                 game_startupTrace("game-loop.engine-update.begin");
+@@ -2780,6 +3364,8 @@ int game_mainLoop(int timer)
+             }
+         PERFINFO_AUTO_STOP_CHECKED("engine_update");
+ 
++        game_processWebSwingAutoplay();
++        game_processWebSwingAutoplayFrames();
+         game_processCapture();
+         
+         demoRecordClientInfo();
+diff --git a/Game/src/graphics/gfx.c b/Game/src/graphics/gfx.c
+index aab27b3e6fadc39c753823b5baf767eb5b3c9450..68ed3a51435c5366d5dac51599cfb0a6e8a09a86 100644
+--- a/Game/src/graphics/gfx.c
++++ b/Game/src/graphics/gfx.c
+@@ -719,6 +719,11 @@ static void gfxSetupStuffToDraw(ViewportInfo *viewport)//int force_render_world,
+         {
+             gfxTreeDrawNode(gfx_tree_root,cam_info.viewmat);
+         }
++        if((gfx_state.mainViewport || viewport->renderPass == RENDERPASS_IMAGECAPTURE) &&
++           viewport->renderCharacters && viewport->renderLines)
++        {
++            entClientDrawWebSwingTethers();
++        }
+         PERFINFO_AUTO_STOP();
+     }
+ 
+@@ -907,6 +912,7 @@ void gfxDraw2DStuffPost3D(int show2D, int headShot)
+         failTextDisplay();
+         PERFINFO_AUTO_STOP_START("displayDebugUI",1);
+         displayDebugInterface2D();
++        pmotionWebSwingCaptureRenderHud();
+ 
+         // this renders the direct xyprintf text
+         PERFINFO_AUTO_STOP_START("fontRenderEditor", 1);
+diff --git a/Game/src/main.c b/Game/src/main.c
+index de4a2d269b182b442d197716a3bc65112e2dfefe..b916866c67bdb33eeab9fc0b8a41e068dc59ae3d 100644
+--- a/Game/src/main.c
++++ b/Game/src/main.c
+@@ -13,6 +13,7 @@
+ #include <utilitieslib/utils/FolderCache.h>
+ #include "clientcomm/autoResumeInfo.h"
+ #include "cmdparse/cmdgame.h"
++#include "cmdparse/cmdcommon.h"
+ #include <utilitieslib/utils/textparser.h>
+ #include "UI/uiAutomap.h"
+ #include "seq/seqstate.h"
+@@ -179,6 +180,21 @@ void SaveArguments(int argc, char **argv)
+     }
+ }
+ 
++static void loadWebSwingVisualStylePreference(void)
++{
++    RegReader rr = createRegReader();
++    unsigned int style = 1;
++
++    if (initRegReader(rr, regGetAppKey()) &&
++        rrReadInt(rr, "WebSwingVisualStyle", &style, 1) &&
++        style <= 3)
++    {
++        g_cohsourcedev_webswing_visual_selection = (S32)style;
++        game_startupTracef("webswingvisual.preference=%d", g_cohsourcedev_webswing_visual_selection);
++    }
++    destroyRegReader(rr);
++}
++
+ int main(int argc, char **argv)
+ {
+     int timer;
+@@ -275,6 +291,11 @@ int main(int argc, char **argv)
+     // localized strings are loaded here
+     game_beforeParseArgs(1);
+ 
++    // Load the player's persistent visual choice before the full argument
++    // pass. An explicit -webswingvisual argument below remains authoritative
++    // for development/capture sessions and intentionally overrides this.
++    loadWebSwingVisualStylePreference();
++
+     //Do after getAutoResumeInfo() so game_state.fullscreen will be correct
+     parseArgs(argc,argv);
+ 
+diff --git a/Game/src/player/player.c b/Game/src/player/player.c
+index a3f69a0b426a45f0e8a9a0ba5a1aedca318222cb..991917ae2838ee568e3b8bcbdbe986352ea2f6e9 100644
+--- a/Game/src/player/player.c
++++ b/Game/src/player/player.c
+@@ -1,6 +1,7 @@
+ #include <utilitieslib/assert/assert.h>
+ #include "player/player.h"
+ #include "entity/entity.h"
++#include "entity/entPlayer.h"
+ #include "cmdparse/cmdgame.h"
+ #include "cmdparse/cmdcommon.h"
+ #include "cmdparse/cmdcontrols.h"
+@@ -65,6 +66,69 @@ int     glob_client_pos_id;
+ 
+ static ServerControlState server_control_state;
+ 
++#if !TEST_CLIENT
++#define WEBSWING_TRAY_NAME "Web Swing"
++#define WEBSWING_TRAY_COMMAND "webswingtoggle"
++#define WEBSWING_TRAY_ICON "COHSOURCEDEV_WebSwing_WebIcon.tga"
++
++static void playerEnsureWebSwingTrayMacro(Entity *e)
++{
++    static Entity *checked_player;
++    static int checked_build = -1;
++    TrayObj *obj = NULL;
++    int build;
++
++    if (!e || !e->pchar || !e->pl || !e->pl->tray)
++        return;
++
++    // The source-integrated client can still run against an ordinary data
++    // install. Only surface the player-facing button when the packaged Web
++    // Swing state namespace is actually present.
++    if (seqGetStateNumberFromName("WEBSWING_AIRBORNE") < 0)
++        return;
++
++    build = e->pchar->iCurBuild;
++    if (checked_player == e && checked_build == build)
++        return;
++
++    resetTrayIterator(e->pl->tray, build, kTrayCategory_PlayerControlled);
++    while (getNextTrayObjFromIterator(&obj))
++    {
++        if (obj && IS_TRAY_MACRO(obj->type) &&
++            !stricmp(obj->command, WEBSWING_TRAY_COMMAND))
++        {
++            if (obj->type != kTrayItemType_MacroHideName ||
++                stricmp(obj->shortName, WEBSWING_TRAY_NAME) ||
++                stricmp(obj->iconName, WEBSWING_TRAY_ICON))
++            {
++                TrayObj upgraded = {0};
++                buildMacroTrayObj(&upgraded,
++                                  WEBSWING_TRAY_COMMAND,
++                                  WEBSWING_TRAY_NAME,
++                                  WEBSWING_TRAY_ICON,
++                                  1);
++                trayobj_copy(obj, &upgraded, TRUE);
++                filelog_printf("webswing.log",
++                               "WEB_SWING CLIENT tray_macro upgraded=1 build=%d icon=%s command=%s\n",
++                               build, WEBSWING_TRAY_ICON, WEBSWING_TRAY_COMMAND);
++            }
++            checked_player = e;
++            checked_build = build;
++            return;
++        }
++    }
++
++    // Use a normal image macro backed by our namespaced Web Swing texture.
++    // macro_create persists it through the normal tray path.
++    macro_create(WEBSWING_TRAY_NAME, WEBSWING_TRAY_COMMAND, WEBSWING_TRAY_ICON, -1);
++    checked_player = e;
++    checked_build = build;
++    filelog_printf("webswing.log",
++                   "WEB_SWING CLIENT tray_macro ensured=1 build=%d icon=%s command=%s\n",
++                   build, WEBSWING_TRAY_ICON, WEBSWING_TRAY_COMMAND);
++}
++#endif
++
+ struct
+ {
+     ControlStateChange* csc;
+@@ -1514,7 +1578,7 @@ static void playerApplyFuturePushes(Entity* e, ControlState* controls)
+                         // Run the physics.
+                         
+                         e->timestep = 1;
+-                        entMotion(e, unitmat);
++                        entMotion(e, unitmat, controls->server_state->web_swing_test_no_attach);
+                         
+                         // Record motion AFTER physics.
+                         
+@@ -1596,6 +1660,55 @@ static void playerRunPhysicsStep(Entity* e, ControlState* controls, Vec3 new_vel
+     motion->input.max_speed_scale    = controls->max_speed_scale;
+     motion->input.max_jump_height    = pmotionGetMaxJumpHeight(e, controls);
+     motion->input.stunned            = controls->server_state->stun;
++    motion->input.web_swing_enabled  = controls->server_state->web_swing;
++    motion->input.web_swing_backend  = controls->server_state->web_swing_backend;
++
++#if !TEST_CLIENT
++    if (e == controlledPlayerPtr())
++        playerEnsureWebSwingTrayMacro(e);
++#endif
++
++    if (e == controlledPlayerPtr() && g_cohsourcedev_webswing_physics_selection >= 0 &&
++        controls->server_state->web_swing_backend != g_cohsourcedev_webswing_physics_selection &&
++        (motion->tickCounter % 30) == 0)
++    {
++        char backendCommand[32];
++        sprintf_s(backendCommand, sizeof(backendCommand), "webswingbackend %d",
++                  g_cohsourcedev_webswing_physics_selection);
++        commAddInput(backendCommand);
++    }
++    if (e == controlledPlayerPtr() && g_cohsourcedev_webswing_physics_selection >= 0 &&
++        !controls->server_state->web_swing && (motion->tickCounter % 30) == 0)
++    {
++        // An explicit handoff physics mode is also an explicit request to use
++        // the prototype. Send the normal server command through prediction's
++        // existing input channel so a fresh client needs no manual setup.
++        commAddInput("webswing 1");
++    }
++
++    if (global_state.webswing_dev && e == controlledPlayerPtr())
++    {
++        static int logged;
++        static int last_server_web_swing = -1;
++        static int last_motion_web_swing_enabled = -1;
++        static Entity *last_player;
++
++        if (!logged || last_player != e ||
++            last_server_web_swing != controls->server_state->web_swing ||
++            last_motion_web_swing_enabled != motion->input.web_swing_enabled)
++        {
++            filelog_printf("webswing.log",
++                           "WEB_SWING CLIENT_PHYSICS player=%s db_id=%d svr_idx=%d webswing_dev=%d server_web_swing=%d motion_web_swing_enabled=%d attached=%d stored_phase=%d\n",
++                           e->namePtr ? e->namePtr : "<unnamed>", e->db_id, e->svr_idx,
++                           global_state.webswing_dev, controls->server_state->web_swing,
++                           motion->input.web_swing_enabled, motion->web_swing_attached,
++                           motion->web_swing_anim_phase);
++            logged = 1;
++            last_player = e;
++            last_server_web_swing = controls->server_state->web_swing;
++            last_motion_web_swing_enabled = motion->input.web_swing_enabled;
++        }
++    }
+ 
+     // Copy the BEFORE data.
+ 
+@@ -1620,7 +1733,7 @@ static void playerRunPhysicsStep(Entity* e, ControlState* controls, Vec3 new_vel
+     
+     // Run the physics.
+ 
+-    entMotion(e, unitmat);
++    entMotion(e, unitmat, controls->server_state->web_swing_test_no_attach);
+     
+     // Record motion AFTER physics.
+     
+@@ -2023,7 +2136,7 @@ static void playerRunPushCatchup(Entity* e, ControlState* controls)
+         
+         e->timestep = 1;
+         global_motion_state.doNotSetAnimBits = 1;
+-        entMotion(e, unitmat);
++        entMotion(e, unitmat, controls->server_state->web_swing_test_no_attach);
+         global_motion_state.doNotSetAnimBits = 0;
+         
+         // Record motion AFTER physics.
+@@ -2332,6 +2445,9 @@ static void playerReceiveServerControlState(Packet *pak)
+         server_state.no_ent_collision =            pktGetBits(pak,1);
+ 
+         server_state.no_jump_repeat =            pktGetBits(pak, 1);
++        server_state.web_swing =                 pktGetBits(pak, 1);
++        server_state.web_swing_backend =         pktGetBits(pak, 1);
++        server_state.web_swing_test_no_attach =  pktGetBits(pak, 1);
+ 
+         if(!oo_packet)
+         {
+@@ -2381,6 +2497,11 @@ static void playerReceiveServerControlState(Packet *pak)
+             motion->input.no_ent_collision =    server_state.no_ent_collision;
+             scs->no_ent_collision =                server_state.no_ent_collision;
+             scs->no_jump_repeat =                server_state.no_jump_repeat;
++            scs->web_swing =                     server_state.web_swing;
++            scs->web_swing_backend =             server_state.web_swing_backend;
++            scs->web_swing_test_no_attach =     server_state.web_swing_test_no_attach;
++            motion->input.web_swing_enabled =    server_state.web_swing;
++            motion->input.web_swing_backend =    server_state.web_swing_backend;
+ 
+             if(motion->input.flying != scs->fly)
+             {
+@@ -2548,7 +2669,7 @@ static void repredictPhysicsSteps(ControlState* controls, ControlStateChange* cs
+         
+         e->timestep = 1;
+         global_motion_state.doNotSetAnimBits = 1;
+-        entMotion(e, unitmat);
++        entMotion(e, unitmat, controls->server_state->web_swing_test_no_attach);
+         global_motion_state.doNotSetAnimBits = 0;
+         
+         // Record motion AFTER physics.
+@@ -2932,4 +3053,7 @@ void setPCCEditingMode(int mode)
+ int getPCCEditingMode()
+ {
+     return ppd.pccEditingMode;
+-}
+\ No newline at end of file
++}
++
++
++

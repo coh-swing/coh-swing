@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "feature": "City of Heroes Web Swing",
+  "featureVersion": "1.0.0",
+  "hunkAnchors": [
+    "webswing",
+    "web_swing",
+    "web swing",
+    "SKY_ASSISTED",
+    "COHSOURCEDEV_WEBSWING"
+  ],
+  "prohibitedAddedLinePatterns": [
+    "webcrawl",
+    "web_crawl",
+    "COHSOURCEDEV_WEBSWING_C57",
+    "WEBSWING_DYNAMIC_",
+    "WEBSWING_V15_PLAYTEST",
+    "\\bmotorcycle\\b",
+    "\\blightbike\\b",
+    "\\bdlss\\b",
+    "\\bglslpilot\\b",
+    "\\bremaster\\b",
+    "\\breshade\\b",
+    "\\bzink\\b"
+  ],
+  "components": [
+    {
+      "id": "001-shared-protocol",
+      "description": "Shared command/state definitions required by both client and server.",
+      "paths": [
+        "Common/cmdparse/cmdcommon.c",
+        "Common/cmdparse/cmdcommon.h",
+        "Common/cmdparse/cmdcontrols.h",
+        "Common/cmdparse/cmdenum.h",
+        "Common/entity/motion.h"
+      ]
+    },
+    {
+      "id": "002-server-physics",
+      "description": "Sky-Assisted movement, collision integration, server actions and toggle behavior.",
+      "paths": [
+        "Common/entity/entworldcoll.c",
+        "Common/entity/entworldcoll.h",
+        "Common/entity/motion.c",
+        "Common/player/pmotion.c",
+        "MapServer/src/cmdparse/cmdserver.c",
+        "MapServer/src/entity/entGameActions.c",
+        "MapServer/src/entity/entGameActions.h",
+        "MapServer/src/svr/svr_init.c",
+        "MapServer/src/svr/svr_player.c"
+      ]
+    },
+    {
+      "id": "003-client-runtime",
+      "description": "Client-side Web Swing state, presentation, frame synchronization and player behavior.",
+      "paths": [
+        "Game/src/cmdparse/cmdgame.c",
+        "Game/src/entity/entclient.c",
+        "Game/src/entity/entclient.h",
+        "Game/src/game.c",
+        "Game/src/graphics/gfx.c",
+        "Game/src/main.c",
+        "Game/src/player/player.c",
+        "Common/player/pmotion.h"
+      ]
+    },
+    {
+      "id": "004-animation-sequencer",
+      "description": "Private production sequencer overlay/state support.",
+      "paths": [
+        "Common/seq/TriggeredMove.h",
+        "Common/seq/seqload.c",
+        "Common/seq/seqsequence.c",
+        "Common/seq/seqstate.c"
+      ]
+    },
+    {
+      "id": "005-fx-rendering",
+      "description": "Web Swing visual/FX integration.",
+      "paths": [
+        "Common/fxinfo.c",
+        "Game/src/graphics/FX/particle.c"
+      ]
+    },
+    {
+      "id": "006-player-ui",
+      "description": "Web Swing tray control and active-state presentation.",
+      "paths": [
+        "Game/src/UI/uiTray.c"
+      ]
+    }
+  ]
+}

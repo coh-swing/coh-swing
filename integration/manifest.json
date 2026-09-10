@@ -1,0 +1,276 @@
+{
+    "schemaVersion":  1,
+    "feature":  "City of Heroes Web Swing",
+    "featureVersion":  "1.0.0",
+    "generatedAtUtc":  "2026-09-09T13:49:27.5790258Z",
+    "baselineFingerprint":  "3b6b216f4d1d15428bf8013747b4c75985ba6c1b701263d9fdd3a759d4e967b4",
+    "patch":  "integration/webswing-v1.patch",
+    "patchSha256":  "8b6168c1c4ee947c81e50343244dfbb7ae5b85148d816e38873c58eb5c6006fe",
+    "sourceFileCount":  29,
+    "sourceFiles":  [
+                        {
+                            "path":  "Common/cmdparse/cmdcommon.c",
+                            "component":  "001-shared-protocol",
+                            "baselineSha256":  "47ea1ae17394cf8c35879b9292787b9c88af35d7dcc14a75bb19c08dd6480b64",
+                            "featureSha256":  "6eefadcdf4f88ce17d1c963e15e748f3e50b7004fdf59c44ae7afbdf3a1fd43a"
+                        },
+                        {
+                            "path":  "Common/cmdparse/cmdcommon.h",
+                            "component":  "001-shared-protocol",
+                            "baselineSha256":  "8cef45c282a117dd20b9904079bff0323bb0763b5003c4cd4bd2296446cfee25",
+                            "featureSha256":  "8dd9dbfe1527c703df4b672487cf7e0f65f8064fe7d33c9546e551332d4fd854"
+                        },
+                        {
+                            "path":  "Common/cmdparse/cmdcontrols.h",
+                            "component":  "001-shared-protocol",
+                            "baselineSha256":  "1f8d5f1a4ff780de795c88cf65033cfe0d6e92418f841498917b37da4e73d79f",
+                            "featureSha256":  "78fd3a678f658da644954c819f3d23c62c3eabae4f7ccccc595c6c8cf913fb35"
+                        },
+                        {
+                            "path":  "Common/cmdparse/cmdenum.h",
+                            "component":  "001-shared-protocol",
+                            "baselineSha256":  "ac8d7cd9d5ece168da548fa2d50df58d30e59dea1b7730ac9a779fe5b385e937",
+                            "featureSha256":  "e44d659e05f2aab4b01dd4dfad0c50cd0755b43d0c45c546c717ef31b24e27da"
+                        },
+                        {
+                            "path":  "Common/entity/motion.h",
+                            "component":  "001-shared-protocol",
+                            "baselineSha256":  "f9a0d93592e3bc3d0d6736af8ed62e93d9f599555fcf02451e1f86fd5bb04f7c",
+                            "featureSha256":  "de2c0b59ca3b10923ecc334d927b8de5275f85da0ee992a1a2d33f9ebbce6140"
+                        },
+                        {
+                            "path":  "Common/entity/entworldcoll.c",
+                            "component":  "002-server-physics",
+                            "baselineSha256":  "535ab59afe780ca98df2eb10c267e458118126d00d2f207a0f4613f556e9394c",
+                            "featureSha256":  "21babe810c103ead2163ffd3fdb7aa2dc0c50477d60f43a9238562e2bcc7fe0f"
+                        },
+                        {
+                            "path":  "Common/entity/entworldcoll.h",
+                            "component":  "002-server-physics",
+                            "baselineSha256":  "3adc6d765cacd4b75a846734d05ad16f988d9082766642aed0255b2b744f6ddb",
+                            "featureSha256":  "3639e4f741dbfcedb79317a6df21fa9eb596b68ec656098d1ab626c61b34e594"
+                        },
+                        {
+                            "path":  "Common/entity/motion.c",
+                            "component":  "002-server-physics",
+                            "baselineSha256":  "d8466a1e426ca917e7dfce9ed6751521223a19b890b90760cd62525d0853093d",
+                            "featureSha256":  "6ec5463810c5a1cc08deb31ba4492433f1db763c4193eccc10645119d154aee4"
+                        },
+                        {
+                            "path":  "Common/player/pmotion.c",
+                            "component":  "002-server-physics",
+                            "baselineSha256":  "8d2c143d69befda3078928ffb7f80d38f9c0dd3f081cbe95b2a5d8947c95dc73",
+                            "featureSha256":  "15e732813c04ac113066e951953a3f681f8380ae94cfad6535f13b3450d01c1f"
+                        },
+                        {
+                            "path":  "MapServer/src/cmdparse/cmdserver.c",
+                            "component":  "002-server-physics",
+                            "baselineSha256":  "fbb31f211eb0a4794f8e9ca7f7c0cc4956bebb649942064b6cc2ba81177d7e29",
+                            "featureSha256":  "53cbc56a9d629cba70defea0adacce4015c932fb75f20799537dcd76dffcc332"
+                        },
+                        {
+                            "path":  "MapServer/src/entity/entGameActions.c",
+                            "component":  "002-server-physics",
+                            "baselineSha256":  "b872f0dc91cc9ca65a4e03717f9937c3dab07d203e7871e6029fbf0fb6ced9bc",
+                            "featureSha256":  "70a754fb4129544343d18cf4a8b61f57507f7dd7bb24faceb7ee6b0025fd611b"
+                        },
+                        {
+                            "path":  "MapServer/src/entity/entGameActions.h",
+                            "component":  "002-server-physics",
+                            "baselineSha256":  "ad9df3c8d080280e66211ba7b19b3f100ed32b5cf97e7965d68e8b625f6b181e",
+                            "featureSha256":  "6c4d79873322ea584ddac0a5ea1ce3af542e3ef5daa2aeabaa04f27f38e16d26"
+                        },
+                        {
+                            "path":  "MapServer/src/svr/svr_init.c",
+                            "component":  "002-server-physics",
+                            "baselineSha256":  "19a477a852615a752e44c34de00675f1ae27ca2b0e300d6489400d016a25c7b5",
+                            "featureSha256":  "6b76e1e9aeb4bc02fe325b96fcdc3e1ad2d9eef9c11faf2f29f6f4dabde607d4"
+                        },
+                        {
+                            "path":  "MapServer/src/svr/svr_player.c",
+                            "component":  "002-server-physics",
+                            "baselineSha256":  "2b916d4928b34fac7d43fe7083ccbcab33d9d26a73533317bdf50af73e453b4d",
+                            "featureSha256":  "7bd6c5a09e44f760f338032afd12c6b37370337be07a7087054227bbf3162cac"
+                        },
+                        {
+                            "path":  "Game/src/cmdparse/cmdgame.c",
+                            "component":  "003-client-runtime",
+                            "baselineSha256":  "47fc091a0d42d01ae2268996cd69c734932e0c6ebcc8d3a393979542c62cb1db",
+                            "featureSha256":  "3a5c2db529ffc6e3fa9c7a296ca750f59a48d29eedc0a4aeef26b5e3933fccde"
+                        },
+                        {
+                            "path":  "Game/src/entity/entclient.c",
+                            "component":  "003-client-runtime",
+                            "baselineSha256":  "cfc5c321c4eb41b730de4eafdc9a7bebfe6403c4bae8f650531021ab1c48547c",
+                            "featureSha256":  "a380d01677d3f1513cfffa0c28c028c520442af51ef5071da60a4883f231b053"
+                        },
+                        {
+                            "path":  "Game/src/entity/entclient.h",
+                            "component":  "003-client-runtime",
+                            "baselineSha256":  "5bb6d3629344256a6305fd43cac40bd4de9e983a9782407e727294075e962cde",
+                            "featureSha256":  "d51bc736ba7bb69c13a39fd4011be84f9750919a055f400f64a33ac6e3f97b07"
+                        },
+                        {
+                            "path":  "Game/src/game.c",
+                            "component":  "003-client-runtime",
+                            "baselineSha256":  "a508d693ccc2723563cf3c77c349e7b41bc292c09d2775285836017261c45cea",
+                            "featureSha256":  "697c51b0831dfa8e7a99da501cd70c459c22c44fa6c9e8e1be5d4c6d56a8062f"
+                        },
+                        {
+                            "path":  "Game/src/graphics/gfx.c",
+                            "component":  "003-client-runtime",
+                            "baselineSha256":  "2da42adf97a3808136958b16d5ba2985a6123cbcc7edeba85f67fc2ae73b4a1c",
+                            "featureSha256":  "00c5997bd9d0e7cfc07e2d013e06810d98259809276450b6cccf8b2d05f18cfc"
+                        },
+                        {
+                            "path":  "Game/src/main.c",
+                            "component":  "003-client-runtime",
+                            "baselineSha256":  "07dc004ef6afd15f1cb7bfa91a7a8e740033415ec5e558fff06eb72f293868c9",
+                            "featureSha256":  "a150f02ea71304bfbf09d9cd06d043cea43e9b6dbf4504c5fd880a85e97c3406"
+                        },
+                        {
+                            "path":  "Game/src/player/player.c",
+                            "component":  "003-client-runtime",
+                            "baselineSha256":  "98da7dd6c51a7b00db8e9332bd58a1973caa5ec3856086a47caac9d0f5986254",
+                            "featureSha256":  "470d27e15e9f69efcbe33ca10af98d78a70e62ce92d46725c921057f2bebe75d"
+                        },
+                        {
+                            "path":  "Common/player/pmotion.h",
+                            "component":  "003-client-runtime",
+                            "baselineSha256":  "9e38deb32b7ce790c799b6d8777cc3a4a24634f032473ff4e729ed81010dd616",
+                            "featureSha256":  "987f3e0e30851eac4edb1b4dc3d8a2edcea7730d889301ad64a230015cbb4d0d"
+                        },
+                        {
+                            "path":  "Common/seq/TriggeredMove.h",
+                            "component":  "004-animation-sequencer",
+                            "baselineSha256":  "783bafe4b1659e526aad0fe5264753c257a87420fe1b8021784a6db717f3c176",
+                            "featureSha256":  "290ff2e6906df23acc934d55d9998a592f43e6ba8e9b9ccafadcd8c5cbb6954c"
+                        },
+                        {
+                            "path":  "Common/seq/seqload.c",
+                            "component":  "004-animation-sequencer",
+                            "baselineSha256":  "0547a5474fbd84eb4172354f69aecb9898f290039584226e493de891beb50328",
+                            "featureSha256":  "dc5ee61b977359ec97d1a89208ae82ffb6e27036dab4a654218b2a0e3324e35f"
+                        },
+                        {
+                            "path":  "Common/seq/seqsequence.c",
+                            "component":  "004-animation-sequencer",
+                            "baselineSha256":  "9cc5eef6a6fede064a48cf8b0b635ad286acb83aa59b9e97004f6781f4cfa28d",
+                            "featureSha256":  "7a0709467c45ebfaccb9be648ac616a08503b486e46bf697b80a7fbff95eecce"
+                        },
+                        {
+                            "path":  "Common/seq/seqstate.c",
+                            "component":  "004-animation-sequencer",
+                            "baselineSha256":  "dd428342cff06374a21cc2a5269bb1dc5beee370c8657735a030efe17c45c5b2",
+                            "featureSha256":  "a43d3686f0b46f702fdba6a74d20551297bfe0e95609c9c9d1576a1c900328d1"
+                        },
+                        {
+                            "path":  "Common/fxinfo.c",
+                            "component":  "005-fx-rendering",
+                            "baselineSha256":  "021b8e1bb38727c6b90ac80a60abc708e5cb0de365eddad7b9d16bd6a3f93f82",
+                            "featureSha256":  "c872e6459cee2c23a3fa796d75287600480f0a1b0b10606fbc6bc2f5fa12d5ac"
+                        },
+                        {
+                            "path":  "Game/src/graphics/FX/particle.c",
+                            "component":  "005-fx-rendering",
+                            "baselineSha256":  "1ed7328ec2e306817c8cb4bbe1c28b52796549282a2969e0b694c59ab8e5be90",
+                            "featureSha256":  "18ffe67a4f20c1a2124b211bb360c7ee2fc6bf6d2b586647454d40858c32e5b0"
+                        },
+                        {
+                            "path":  "Game/src/UI/uiTray.c",
+                            "component":  "006-player-ui",
+                            "baselineSha256":  "7fe268cef61e7e0ca266c3f1b29c53c16e79f4d3faedb054f1ae009a0828f186",
+                            "featureSha256":  "166c9a7e5357f1edec5a1b17123867347727104931aa6c6cc6128be4bbf4e022"
+                        }
+                    ],
+    "components":  [
+                       {
+                           "id":  "001-shared-protocol",
+                           "description":  "Shared command/state definitions required by both client and server.",
+                           "patch":  "integration/patches/001-shared-protocol.patch",
+                           "bytes":  15145,
+                           "sha256":  "bed1750ab809efba2289f8f81eebcca4dbef32c1ff8a73974d4eeb920d1693cd",
+                           "paths":  [
+                                         "Common/cmdparse/cmdcommon.c",
+                                         "Common/cmdparse/cmdcommon.h",
+                                         "Common/cmdparse/cmdcontrols.h",
+                                         "Common/cmdparse/cmdenum.h",
+                                         "Common/entity/motion.h"
+                                     ]
+                       },
+                       {
+                           "id":  "002-server-physics",
+                           "description":  "Sky-Assisted movement, collision integration, server actions and toggle behavior.",
+                           "patch":  "integration/patches/002-server-physics.patch",
+                           "bytes":  237089,
+                           "sha256":  "28c81dda7bf8c51a8754b49253a72919178539b02d890faf245ee7b62695bda8",
+                           "paths":  [
+                                         "Common/entity/entworldcoll.c",
+                                         "Common/entity/entworldcoll.h",
+                                         "Common/entity/motion.c",
+                                         "Common/player/pmotion.c",
+                                         "MapServer/src/cmdparse/cmdserver.c",
+                                         "MapServer/src/entity/entGameActions.c",
+                                         "MapServer/src/entity/entGameActions.h",
+                                         "MapServer/src/svr/svr_init.c",
+                                         "MapServer/src/svr/svr_player.c"
+                                     ]
+                       },
+                       {
+                           "id":  "003-client-runtime",
+                           "description":  "Client-side Web Swing state, presentation, frame synchronization and player behavior.",
+                           "patch":  "integration/patches/003-client-runtime.patch",
+                           "bytes":  130422,
+                           "sha256":  "fe89a85625b07feb16b50a23e804e49e2cec153021303cb4ea83c92fa9688670",
+                           "paths":  [
+                                         "Game/src/cmdparse/cmdgame.c",
+                                         "Game/src/entity/entclient.c",
+                                         "Game/src/entity/entclient.h",
+                                         "Game/src/game.c",
+                                         "Game/src/graphics/gfx.c",
+                                         "Game/src/main.c",
+                                         "Game/src/player/player.c",
+                                         "Common/player/pmotion.h"
+                                     ]
+                       },
+                       {
+                           "id":  "004-animation-sequencer",
+                           "description":  "Private production sequencer overlay/state support.",
+                           "patch":  "integration/patches/004-animation-sequencer.patch",
+                           "bytes":  46846,
+                           "sha256":  "5cfbfba0fa9b910d4060187d176b72f6cf1ed091509c37ab4ac59fd35d83c96f",
+                           "paths":  [
+                                         "Common/seq/TriggeredMove.h",
+                                         "Common/seq/seqload.c",
+                                         "Common/seq/seqsequence.c",
+                                         "Common/seq/seqstate.c"
+                                     ]
+                       },
+                       {
+                           "id":  "005-fx-rendering",
+                           "description":  "Web Swing visual/FX integration.",
+                           "patch":  "integration/patches/005-fx-rendering.patch",
+                           "bytes":  3680,
+                           "sha256":  "560245a57d340b7f9e35cd4a78c663830d1358bdd418230d65ed3f060ea6fb99",
+                           "paths":  [
+                                         "Common/fxinfo.c",
+                                         "Game/src/graphics/FX/particle.c"
+                                     ]
+                       },
+                       {
+                           "id":  "006-player-ui",
+                           "description":  "Web Swing tray control and active-state presentation.",
+                           "patch":  "integration/patches/006-player-ui.patch",
+                           "bytes":  2496,
+                           "sha256":  "ddd91fad4e3bfd2cd8d6f697455777aaefa2e11e8e1e0c26dc31e671a839c033",
+                           "paths":  [
+                                         "Game/src/UI/uiTray.c"
+                                     ]
+                       }
+                   ],
+    "payloadManifest":  "integration/asset-manifest.json",
+    "strictHunkReview":  {
+                             "unscopedHunks":  39,
+                             "mixedFeatureLines":  0
+                         }
+}

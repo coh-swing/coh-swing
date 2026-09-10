@@ -1,0 +1,13 @@
+StateBit WEBSWING_AIRBORNE Predictable
+StateBit WEBSWING_ATTACHED Predictable
+StateBit WEBSWING_DESCEND Predictable
+StateBit WEBSWING_BOTTOM Predictable
+StateBit WEBSWING_ASCEND Predictable
+StateBit WEBSWING_MALE Predictable
+StateBit WEBSWING_ASCEND_MALE_ENTER Predictable
+StateBit WEBSWING_SHOOT Predictable
+StateBit WEBSWING_RETRACT Predictable
+StateBit WEBSWING_GROUND_LAUNCH Predictable
+StateBit WEBSWING_VARIANT_B Predictable
+StateBit WEBSWING_CORE_SYNC Predictable
+StateBit WEBSWING_FLIP_BACK Predictable

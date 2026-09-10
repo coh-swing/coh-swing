@@ -1,0 +1,219 @@
+{
+    "schemaVersion":  1,
+    "featureVersion":  "1.0.0",
+    "animationCount":  29,
+    "payloadFileCount":  35,
+    "playerInclude":  "include sequencers/cohsourcedev_webswing.inc",
+    "files":  [
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/fem/COHSOURCEDEV_WEBSWING_ASCEND.anim",
+                      "bytes":  15685,
+                      "sha256":  "6763d8f5e29de8d8a3fdcd7be026f9c6f10bdbec5fb47fd5140bb292dda84624"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/fem/COHSOURCEDEV_WEBSWING_COMPACT_V2.anim",
+                      "bytes":  7347,
+                      "sha256":  "a668f5bc93881a3637f83c5e5fefc01c697362507d5e829902263baa87487b7b"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/fem/COHSOURCEDEV_WEBSWING_GROUND_LAUNCH_V2.anim",
+                      "bytes":  8357,
+                      "sha256":  "3e316acaa2ae05d42c9eb00a192239c86b64ed086f99bf747cc36d7421ddec09"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/fem/COHSOURCEDEV_WEBSWING_MAIN_V1.anim",
+                      "bytes":  9987,
+                      "sha256":  "2287e82d748524c4a5fcaf3d990d6a6efe1b569adecfa0885f505ea71f946a9e"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/fem/COHSOURCEDEV_WEBSWING_NINJA_HOP_V1.anim",
+                      "bytes":  14162,
+                      "sha256":  "0b0135c480f6ae64063dd2cbd805b551c54fedc2608c8a048204cd9de62c208e"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/fem/COHSOURCEDEV_WEBSWING_NINJA_JUMP_V1.anim",
+                      "bytes":  25257,
+                      "sha256":  "cf0d8b840f445c5aa0c207be43e02ce3b80f2d70b473052c11be8cd3dba14c46"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/fem/COHSOURCEDEV_WEBSWING_RELEASE_V2.anim",
+                      "bytes":  4687,
+                      "sha256":  "2466e1b7e71329cb616d3d864f2c71fe3123e5f4e1a99503ab5af107979a5550"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/fem/COHSOURCEDEV_WEBSWING_SHOOT_V2.anim",
+                      "bytes":  5067,
+                      "sha256":  "d1ac9ee4259cb182db70d45e49b7f9910931598aa52e17e5f461e84b60648556"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/fem/COHSOURCEDEV_WEBSWING_STRETCH.anim",
+                      "bytes":  16433,
+                      "sha256":  "e3cf68784c2e5f553bd600b69fb1865f0b302b67b6e5f8c8b56c0557d26cca15"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/fem/COHSOURCEDEV_WEBSWING_TUCK.anim",
+                      "bytes":  13817,
+                      "sha256":  "6849cc4299df8fd69c50d4bcd18e33887b42d056378ecaa351c4c94ceb0f11f7"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/huge/COHSOURCEDEV_WEBSWING_ASCEND.anim",
+                      "bytes":  16096,
+                      "sha256":  "25ee920015e5d9844dd50b40da250ebfd54e4532f00c6627474fcd9a28b09bcb"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/huge/COHSOURCEDEV_WEBSWING_COMPACT_V2.anim",
+                      "bytes":  7266,
+                      "sha256":  "c3ef5f6c9802f85fd68b2259354f679015edf128514b5bf0f3f0bb28cd62758d"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/huge/COHSOURCEDEV_WEBSWING_GROUND_LAUNCH_V2.anim",
+                      "bytes":  8276,
+                      "sha256":  "8687fc610401d1a73b638cdf218587e63ec0c880ebab74f08ad9e090849b198e"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/huge/COHSOURCEDEV_WEBSWING_MAIN_V1.anim",
+                      "bytes":  9891,
+                      "sha256":  "d3f290a843ad83d5a43395df65d08f7dd0b28422769b28f1ad0119773d70f1e7"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/huge/COHSOURCEDEV_WEBSWING_NINJA_HOP_V1.anim",
+                      "bytes":  14081,
+                      "sha256":  "cc8fd3634892eea5b6a33183c2737b45c38d6178cd4ce0c4d79383e507556d16"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/huge/COHSOURCEDEV_WEBSWING_NINJA_JUMP_V1.anim",
+                      "bytes":  25176,
+                      "sha256":  "0f25bbfd2a91c9c1ad6cb36b65deaede17f1766bacb0463d141a264efc61a126"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/huge/COHSOURCEDEV_WEBSWING_RELEASE_V2.anim",
+                      "bytes":  4606,
+                      "sha256":  "32737784969ba3c2d6285a4651874e65c6e6dd7a6d37eeec8a17c3e194bcf32f"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/huge/COHSOURCEDEV_WEBSWING_SHOOT_V2.anim",
+                      "bytes":  4986,
+                      "sha256":  "6659e969c82e83ec47f2e36fb8609a69f7484c4e8abd8a97a10504049a58dfbe"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/huge/COHSOURCEDEV_WEBSWING_STRETCH.anim",
+                      "bytes":  17066,
+                      "sha256":  "cb0957ffa0eac06af0e82a379a442350d3e555490ac86f9efb71d9bc29b22884"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/huge/COHSOURCEDEV_WEBSWING_TUCK.anim",
+                      "bytes":  14156,
+                      "sha256":  "e84ee5d0b9154b789b06b3a7f9831050ebe8803c61f73ae7f178266b66100e18"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/male/COHSOURCEDEV_RETARGET_RESTBASIS_BOTTOM.anim",
+                      "bytes":  3251,
+                      "sha256":  "e1cb732169ba920b03d164ce062ec0a18d80099cba96184f082ba29d3512e9b2"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/male/COHSOURCEDEV_RETARGET_SWING_FULL.anim",
+                      "bytes":  9066,
+                      "sha256":  "2a674b086d7fa916530002ead55451fdf28fd9780a9efee23205eed4b66d388e"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/male/COHSOURCEDEV_WEBSWING_ASCEND.anim",
+                      "bytes":  17700,
+                      "sha256":  "299b7b0e4b1c6d8f61f0e41577158aadbb572ceb879c04671729f7c78a03e838"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/male/COHSOURCEDEV_WEBSWING_COMPACT_V2.anim",
+                      "bytes":  7526,
+                      "sha256":  "8d184c1c7ff62dd7098bc8fc7d1ab39202a5bf1c895e7d99c7fbe94c48db066f"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/male/COHSOURCEDEV_WEBSWING_GROUND_LAUNCH_V2.anim",
+                      "bytes":  8536,
+                      "sha256":  "31cc2f173751306fb64ec357850cfb0c2312b7a4bb342172b442c24bce40c648"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/male/COHSOURCEDEV_WEBSWING_MAIN_V1.anim",
+                      "bytes":  10166,
+                      "sha256":  "24dbb602962591c1c11c04ffbd9d260eeaef5cbecc18c1ae431415702cc6f0f8"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/male/COHSOURCEDEV_WEBSWING_RELEASE_V2.anim",
+                      "bytes":  4866,
+                      "sha256":  "a8b25c67359ed6b055b8adcebd5b53f79eb62d001ebbed5463c7438ffd520257"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/male/COHSOURCEDEV_WEBSWING_SHOOT_V2.anim",
+                      "bytes":  5246,
+                      "sha256":  "ff7e3ab25ac179ab5a2dd4df5e5d6b2beb903e4da9238dfeb32b270b496668b0"
+                  },
+                  {
+                      "kind":  "animation",
+                      "target":  "bin/data/player_library/animations/male/COHSOURCEDEV_WEBSWING_STRETCH_V2.anim",
+                      "bytes":  17261,
+                      "sha256":  "35b6da70ed03466828a38aa31270b22b139384a7a799f8bd8f2b9cbf05ece0e4"
+                  },
+                  {
+                      "kind":  "sequencer",
+                      "target":  "bin/data/sequencers/cohsourcedev_webswing.inc",
+                      "bytes":  24788,
+                      "sha256":  "3191fc7f306bbccc26fc5d6577f09ef3def18a6d75c0b7d64705ee3e003f23c2"
+                  },
+                  {
+                      "kind":  "sequencer",
+                      "target":  "bin/data/sequencers/cohsourcedev_webswing.txt",
+                      "bytes":  62,
+                      "sha256":  "d31f980c3966dff5feec98f2482c94ce64645a61c33b907dd5db1bc116ad0046"
+                  },
+                  {
+                      "kind":  "statebits",
+                      "target":  "bin/data/cohsourcedev_webswing.statebits",
+                      "bytes":  511,
+                      "sha256":  "889c6dc0e968c8433d30bbcdcdfbed2de4477e71ce8ff3ddbc36ffdb7d41ad23"
+                  },
+                  {
+                      "kind":  "fx",
+                      "target":  "bin/data/fx/COHSOURCEDEV/WebSwingTechAnchor.fx",
+                      "bytes":  664,
+                      "sha256":  "63d4a40df0e9e9f4359fc56adaabf90b16e04c37db660ee50170126dc5807d09"
+                  },
+                  {
+                      "kind":  "fx",
+                      "target":  "bin/data/fx/COHSOURCEDEV/WebSwingMagicAnchor.fx",
+                      "bytes":  522,
+                      "sha256":  "ebb6fbc63b5580f60e6487d3e7030b44bcf53c83c783a72243f783a03deed527"
+                  },
+                  {
+                      "kind":  "icon",
+                      "target":  "bin/data/texture_library/GUI/Icons/COHSOURCEDEV_WebSwing_WebIcon.texture",
+                      "bytes":  4316,
+                      "sha256":  "94deda6ec3d368ea2e6a297c18b6206d05a7cd952a7035168c6887d07586c3bb"
+                  }
+              ]
+}

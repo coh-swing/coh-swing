@@ -1,0 +1,83 @@
+warning: in the working copy of 'Common/fxinfo.c', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Game/src/graphics/FX/particle.c', LF will be replaced by CRLF the next time Git touches it
+diff --git a/Common/fxinfo.c b/Common/fxinfo.c
+index 9a5be5b15b762badf7e24a875e2f828062005d4e..7a3fe06241beae351768725f4bd36720c479ee4e 100644
+--- a/Common/fxinfo.c
++++ b/Common/fxinfo.c
+@@ -965,6 +965,23 @@ FxInfo * fxGetFxInfo(const char fx_name[])
+     }
+     // ## End development only
+ 
++#if CLIENT
++    // Packaged COHSOURCEDEV traversal FX are intentionally allowed from a
++    // normal Release client. Keep the exception deliberately tiny: only our
++    // namespaced FX and only when the packed dictionary did not already resolve
++    // the requested effect. General loose-FX development semantics stay closed.
++    if (!fxinfo &&
++        !strnicmp(fx_name_cleaned_up, "COHSOURCEDEV/", strlen("COHSOURCEDEV/")))
++    {
++        char buf[500];
++        STR_COMBINE_BEGIN(buf);
++        STR_COMBINE_CAT("fx/");
++        STR_COMBINE_CAT(fx_name_cleaned_up);
++        STR_COMBINE_END();
++        fxinfo = fxLoadFxInfo(buf);
++    }
++#endif
++
+     if( fxinfo )
+     {
+         if (!fxinfo->initialized)
+diff --git a/Game/src/graphics/FX/particle.c b/Game/src/graphics/FX/particle.c
+index 3afe48c43f3b71ae96841bcdc5963c22605c7051..22801c515f937f1085fbc3ba981fdf252ff99531 100644
+--- a/Game/src/graphics/FX/particle.c
++++ b/Game/src/graphics/FX/particle.c
+@@ -1319,11 +1319,18 @@ ParticleSystemInfo * partGetSystemInfo( char system_name[] )
+     ParticleSystemInfo * sysinfo = 0;
+     char part_name_cleaned_up[FX_MAX_PATH];
+     int numparticles;
++    int allow_webswing_loose_part = 0;
+     ParticleSystemInfo dummy = {0};
+     ParticleSystemInfo * * dptr;
+ 
+     fxCleanFileName(part_name_cleaned_up, system_name);
+ 
++    // Packaged traversal particles use a dedicated namespace and are allowed
++    // from a normal Release client. Production/retail lookup semantics remain
++    // unchanged for every non-COHSOURCEDEV asset path.
++    allow_webswing_loose_part =
++        !strnicmp(part_name_cleaned_up, "COHSOURCEDEV/", 13);
++
+     // ## Search Marks binary of loaded fxinfos.
+     dummy.name = part_name_cleaned_up;
+     numparticles = eaSize(&particle_info.list);
+@@ -1334,7 +1341,8 @@ ParticleSystemInfo * partGetSystemInfo( char system_name[] )
+         sysinfo = *dptr;
+         assert(sysinfo);
+         //Development only
+-        if (!global_state.no_file_change_check && isDevelopmentMode())
++        if (!global_state.no_file_change_check &&
++            (isDevelopmentMode() || allow_webswing_loose_part))
+             sysinfo->fileAge = fileLastChanged( "bin/particles.bin" );
+         //End developmetn only
+     }
+@@ -1342,7 +1350,8 @@ ParticleSystemInfo * partGetSystemInfo( char system_name[] )
+     //Failure in production mode == very bad data.
+ 
+     // ## Development Only
+-    if ( !global_state.no_file_change_check && isDevelopmentMode() )
++    if ( !global_state.no_file_change_check &&
++         (isDevelopmentMode() || allow_webswing_loose_part) )
+     {
+         // Always prefer systems in the list
+         {
+@@ -1388,7 +1397,8 @@ ParticleSystemInfo * partGetSystemInfo( char system_name[] )
+             sysinfo->initialized = 1;
+         }
+         //Development Only -- initialize the fileAge to current time
+-        if (!global_state.no_file_change_check && isDevelopmentMode())
++        if (!global_state.no_file_change_check &&
++            (isDevelopmentMode() || allow_webswing_loose_part))
+         { //development mode initialization
+             char buf[500];
+             sysinfo->fileAge = 0;
